@@ -9,6 +9,12 @@ uniform vec3 uMoonDirection;
 uniform vec3 uSunColor;
 uniform sampler2D uMoonTexture;
 
+float starHash(vec3 p) {
+    p = fract(p * vec3(443.897, 441.423, 437.195));
+    p += dot(p, p.yxz + 19.19);
+    return fract((p.x + p.y) * p.z);
+}
+
 void main() {
     vec3 dir = normalize(vWorldDir);
     float h = clamp(dir.y * 0.5 + 0.5, 0.0, 1.0);
@@ -35,6 +41,11 @@ void main() {
     activeZenith = mix(nightZenith, activeZenith, sunsetNightMix);
 
     vec3 skyGradient = mix(activeHorizon, activeZenith, pow(1.0 - h, 0.8));
+
+    // Stars
+    float stars = pow(starHash(floor(dir * 800.0)), 120.0);
+    float starSelection = smoothstep(-0.25, -0.6, sunElevation);
+    skyGradient += stars * starSelection;
 
     // Horizon haze
     float horizonBand = 1.0 - smoothstep(0.02, 0.35, dir.y);
