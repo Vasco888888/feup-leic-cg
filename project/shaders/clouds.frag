@@ -4,6 +4,7 @@ precision highp float;
 
 varying vec3 vWorldDir;
 
+uniform vec3 uSunDirection;
 uniform float uCloudOffset;
 
 float hash(vec2 p) {
@@ -35,11 +36,9 @@ float fbm(vec2 p) {
 }
 
 void main() {
-    // Using World Direction instead of UVs for guaranteed mapping.
-    // Projected XZ coordinates create a natural planar look for clouds.
     vec2 coords = vWorldDir.xz / (max(vWorldDir.y, 0.01) + 0.5);
+    float sunElevation = uSunDirection.y;
     
-    // Add the animation offset manually from the uniform
     coords.x += uCloudOffset;
     coords.y += uCloudOffset * 0.35;
 
@@ -52,10 +51,27 @@ void main() {
     float horizonFade = smoothstep(-0.02, 0.35, vWorldDir.y);
     float cloudMask = smoothstep(0.42, 0.55, field) * horizonFade;
 
-    // Natural puffy cloud colors
-    vec3 cloudBase = vec3(0.85, 0.90, 0.95);
-    vec3 cloudTop = vec3(1.0);
-    vec3 cloudColor = mix(cloudBase, cloudTop, nB * 1.5);
+    // Day vs Night factors
+    float daySunsetMix = smoothstep(-0.15, 0.4, sunElevation);
+    float sunsetNightMix = smoothstep(-0.5, -0.1, sunElevation);
+
+    // Palettes
+    vec3 dBase = vec3(0.55, 0.65, 0.8);
+    vec3 dTop = vec3(1.0, 1.0, 1.0);
+    
+    vec3 sBase = vec3(0.4, 0.25, 0.45);
+    vec3 sTop = vec3(1.0, 0.7, 0.4);
+    
+    vec3 nBase = vec3(0.015, 0.02, 0.04);
+    vec3 nTop = vec3(0.03, 0.05, 0.1);
+
+    vec3 activeBase = mix(sBase, dBase, daySunsetMix);
+    activeBase = mix(nBase, activeBase, sunsetNightMix);
+
+    vec3 activeTop = mix(sTop, dTop, daySunsetMix);
+    activeTop = mix(nTop, activeTop, sunsetNightMix);
+
+    vec3 cloudColor = mix(activeBase, activeTop, nB * 1.5);
     
     gl_FragColor = vec4(cloudColor, cloudMask * 0.95);
 }

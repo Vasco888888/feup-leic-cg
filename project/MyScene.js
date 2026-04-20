@@ -114,7 +114,10 @@ export class MyScene extends CGFscene {
 
         // Wrap offset to avoid float precision issues in shaders at high values
         this.cloudOffset = ((t / 1000.0) * this.cloudSpeed) % 1000.0;
-        this.cloudShader.setUniformsValues({ uCloudOffset: this.cloudOffset });
+        this.cloudShader.setUniformsValues({ 
+            uCloudOffset: this.cloudOffset,
+            uSunDirection: this.sunDirection
+        });
     }
 
     updateLightStates() {
