@@ -13,7 +13,7 @@ export class MyScene extends CGFscene {
         this.sunLightEnabled = true;
         this.spotLightEnabled = true;
 
-        this.cloudSpeed = 0.02;
+        this.cloudSpeed = 0.01;
         this.cloudOffset = 0.0;
         this.skyRadius = 260.0;
 

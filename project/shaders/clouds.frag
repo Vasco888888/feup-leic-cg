@@ -44,7 +44,6 @@ void main() {
     coords.x += uCloudOffset;
     coords.y += uCloudOffset * 0.35;
 
-    // Cumulus Logic
     float nA = fbm(coords * 2.8);
     float nB = fbm(coords * 9.0 + nA * 0.4);
 
