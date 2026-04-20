@@ -1,4 +1,4 @@
-import { CGFscene, CGFcamera, CGFaxis, CGFappearance, CGFshader } from "../lib/CGF.js";
+import { CGFscene, CGFcamera, CGFaxis, CGFappearance, CGFshader, CGFtexture } from "../lib/CGF.js";
 import { MySkyDome } from "./MySkyDome.js";
 import { MyPlane } from "./MyPlane.js";
 
@@ -59,9 +59,11 @@ export class MyScene extends CGFscene {
         this.floorAppearance.setShininess(12.0);
 
         this.skyShader = new CGFshader(this.gl, "shaders/sky.vert", "shaders/sky.frag");
+        this.moonTexture = new CGFtexture(this, "textures/moon.jpg");
         this.skyShader.setUniformsValues({
             uSunDirection: this.sunDirection,
-            uSunColor: [1.0, 0.92, 0.73]
+            uSunColor: [1.0, 0.92, 0.73],
+            uMoonTexture: 0
         });
 
         this.cloudShader = new CGFshader(this.gl, "shaders/clouds.vert", "shaders/clouds.frag");
@@ -104,19 +106,28 @@ export class MyScene extends CGFscene {
     }
 
     update(t) {
-        // Day-Night Cycle: Circular path for the sun
         this.dayTime = (t / 1000.0) * this.dayCycleSpeed;
         this.sunDirection = vec3.fromValues(
             Math.cos(this.dayTime),
             Math.sin(this.dayTime),
             -0.6
         );
+        this.moonDirection = vec3.fromValues(
+            -this.sunDirection[0],
+            -this.sunDirection[1],
+            -this.sunDirection[2]
+        );
 
-        // Wrap offset to avoid float precision issues in shaders at high values
         this.cloudOffset = ((t / 1000.0) * this.cloudSpeed) % 1000.0;
+        
         this.cloudShader.setUniformsValues({ 
             uCloudOffset: this.cloudOffset,
             uSunDirection: this.sunDirection
+        });
+        
+        this.skyShader.setUniformsValues({ 
+            uSunDirection: this.sunDirection,
+            uMoonDirection: this.moonDirection
         });
     }
 
@@ -144,6 +155,7 @@ export class MyScene extends CGFscene {
         this.skyAppearance.apply();
         this.setActiveShader(this.skyShader);
         this.skyShader.setUniformsValues({ uSunDirection: this.sunDirection });
+        this.moonTexture.bind(0);
         this.skyDome.display();
 
         if (this.showClouds) {

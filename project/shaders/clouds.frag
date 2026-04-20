@@ -51,11 +51,10 @@ void main() {
     float horizonFade = smoothstep(-0.02, 0.35, vWorldDir.y);
     float cloudMask = smoothstep(0.42, 0.55, field) * horizonFade;
 
-    // Day vs Night factors
     float daySunsetMix = smoothstep(-0.15, 0.4, sunElevation);
     float sunsetNightMix = smoothstep(-0.5, -0.1, sunElevation);
 
-    // Palettes
+    // Color states
     vec3 dBase = vec3(0.55, 0.65, 0.8);
     vec3 dTop = vec3(1.0, 1.0, 1.0);
     
