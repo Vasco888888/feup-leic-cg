@@ -2,7 +2,6 @@
 precision highp float;
 #endif
 
-varying vec2 vTextureCoord;
 varying vec3 vWorldDir;
 
 uniform float uCloudOffset;
