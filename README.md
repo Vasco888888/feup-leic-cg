@@ -1,10 +1,11 @@
 # CG 2025/2026
 
 ## Group T04G06
-| Name             | Number    | E-Mail             |
-| ---------------- | --------- | ------------------ |
-| Mário Pereira    | 202304965 | up202304965@up.pt |
-| Vasco Sá         | 202306731 | up202306731@up.pt |
+| Name               | Number     | E-Mail             |
+| -----------------  | ---------- | ------------------ |
+| Mário Pereira      | 202304965  | up202304965@up.pt  |
+| Vasco Sá           | 202306731  | up202306731@up.pt  |
+| Francisco Borralho | 201806242  | up201806242@up.pt  |
 
 ----
 
