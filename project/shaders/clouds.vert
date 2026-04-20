@@ -13,11 +13,7 @@ varying vec3 vWorldDir;
 void main() {
     vec4 worldPos = vec4(aVertexPosition, 1.0);
     vWorldDir = normalize(worldPos.xyz);
-
-    vec2 uv = aTextureCoord;
-    uv.x += uCloudOffset;
-    uv.y += uCloudOffset * 0.35;
-    vTextureCoord = uv;
+    vTextureCoord = aTextureCoord;
 
     gl_Position = uPMatrix * uMVMatrix * worldPos;
 }

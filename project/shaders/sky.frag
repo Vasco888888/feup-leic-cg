@@ -22,8 +22,9 @@ void main() {
     vec3 haze = vec3(0.90, 0.93, 0.98) * horizonBand * 0.16;
 
     float sunAmount = max(dot(dir, normalize(uSunDirection)), 0.0);
-    float sunCore = pow(sunAmount, 900.0);
-    float sunGlow = pow(sunAmount, 36.0);
+    // Increased powers to shrink the sun (higher power = smaller, sharper highlight)
+    float sunCore = pow(sunAmount, 4000.0); 
+    float sunGlow = pow(sunAmount, 120.0);
 
     vec3 skyColor = skyGradient + haze;
     skyColor += uSunColor * (sunGlow * 0.85 + sunCore * 3.2);

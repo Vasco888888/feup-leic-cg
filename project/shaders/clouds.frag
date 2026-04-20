@@ -5,6 +5,8 @@ precision highp float;
 varying vec2 vTextureCoord;
 varying vec3 vWorldDir;
 
+uniform float uCloudOffset;
+
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
 }
@@ -34,18 +36,28 @@ float fbm(vec2 p) {
 }
 
 void main() {
-    // Primary cloud field.
-    vec2 uvA = vTextureCoord * 4.6;
-    float nA = fbm(uvA);
+    // Using World Direction instead of UVs for guaranteed mapping.
+    // Projected XZ coordinates create a natural planar look for clouds.
+    vec2 coords = vWorldDir.xz / (max(vWorldDir.y, 0.01) + 0.5);
+    
+    // Add the animation offset manually from the uniform
+    coords.x += uCloudOffset;
+    coords.y += uCloudOffset * 0.35;
 
-    // Secondary procedural layer (acts as a second texture layer).
-    vec2 uvB = vec2(vTextureCoord.x * 8.0 + 0.7, vTextureCoord.y * 5.5 + vTextureCoord.x * 1.1);
-    float nB = fbm(uvB);
+    // Cumulus Logic
+    float nA = fbm(coords * 2.8);
+    float nB = fbm(coords * 9.0 + nA * 0.4);
 
-    float horizonFade = smoothstep(-0.02, 0.62, vWorldDir.y);
-    float cloudField = nA * 0.78 + nB * 0.48;
-    float cloudMask = smoothstep(0.66, 0.90, cloudField) * horizonFade;
+    float field = nA * 0.8 + nB * 0.35;
+    field = pow(field, 1.3);
 
-    vec3 cloudColor = mix(vec3(0.86, 0.91, 0.97), vec3(1.0), nB);
-    gl_FragColor = vec4(cloudColor, cloudMask * 0.62);
+    float horizonFade = smoothstep(-0.02, 0.35, vWorldDir.y);
+    float cloudMask = smoothstep(0.42, 0.55, field) * horizonFade;
+
+    // Natural puffy cloud colors
+    vec3 cloudBase = vec3(0.85, 0.90, 0.95);
+    vec3 cloudTop = vec3(1.0);
+    vec3 cloudColor = mix(cloudBase, cloudTop, nB * 1.5);
+    
+    gl_FragColor = vec4(cloudColor, cloudMask * 0.95);
 }
