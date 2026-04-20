@@ -18,6 +18,8 @@ export class MyScene extends CGFscene {
         this.skyRadius = 260.0;
 
         this.sunDirection = vec3.fromValues(-0.35, 0.72, -0.60);
+        this.dayCycleSpeed = 0.2;
+        this.dayTime = 0;
     }
 
     init(application) {
@@ -102,6 +104,14 @@ export class MyScene extends CGFscene {
     }
 
     update(t) {
+        // Day-Night Cycle: Circular path for the sun
+        this.dayTime = (t / 1000.0) * this.dayCycleSpeed;
+        this.sunDirection = vec3.fromValues(
+            Math.cos(this.dayTime),
+            Math.sin(this.dayTime),
+            -0.6
+        );
+
         // Wrap offset to avoid float precision issues in shaders at high values
         this.cloudOffset = ((t / 1000.0) * this.cloudSpeed) % 1000.0;
         this.cloudShader.setUniformsValues({ uCloudOffset: this.cloudOffset });
