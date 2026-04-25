@@ -1,4 +1,4 @@
-import { CGFobject, CGFappearance } from '../../lib/CGF.js';
+import { CGFobject, CGFappearance, CGFtexture } from '../../lib/CGF.js';
 
 /**
  * MyCover
@@ -8,12 +8,16 @@ export class MyCover extends CGFobject {
         super(scene);
         this.initBuffers();
 
-        // Cloth material
+        // Burlap Cloth Material
         this.material = new CGFappearance(scene);
-        this.material.setAmbient(0.7, 0.7, 0.7, 1.0);
-        this.material.setDiffuse(0.9, 0.9, 0.9, 1.0);
+        this.material.setAmbient(0.4, 0.4, 0.4, 1.0);
+        this.material.setDiffuse(0.8, 0.8, 0.8, 1.0);
         this.material.setSpecular(0.1, 0.1, 0.1, 1.0);
         this.material.setShininess(1.0);
+
+        this.texture = new CGFtexture(scene, "textures/wagon/burlap_cover.jpg");
+        this.material.setTexture(this.texture);
+        this.material.setTextureWrap('REPEAT', 'REPEAT');
     }
 
     initBuffers() {

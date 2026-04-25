@@ -1,4 +1,4 @@
-import { CGFobject, CGFappearance } from '../../lib/CGF.js';
+import { CGFobject, CGFappearance, CGFtexture } from '../../lib/CGF.js';
 
 /**
  * MyWagonBed
@@ -7,47 +7,74 @@ export class MyWagonBed extends CGFobject {
     constructor(scene) {
         super(scene);
         this.initBuffers();
-        
-        // Basic wooden material
+
+        // Dark Oak Wood Material
         this.material = new CGFappearance(scene);
         this.material.setAmbient(0.3, 0.2, 0.1, 1.0);
-        this.material.setDiffuse(0.6, 0.4, 0.2, 1.0);
+        this.material.setDiffuse(0.8, 0.8, 0.8, 1.0);
         this.material.setSpecular(0.1, 0.1, 0.1, 1.0);
         this.material.setShininess(5.0);
+
+        this.texture = new CGFtexture(scene, "textures/dark_oak_wood.jpg");
+        this.material.setTexture(this.texture);
+        this.material.setTextureWrap('REPEAT', 'REPEAT');
     }
 
     initBuffers() {
-        // A box with: Length 3 (X), Width 2 (Z), Height 0.5 (Y)
+        // Dimensions: Length 3 (X), Width 2 (Z), Height 0.5 (Y)
+        const x = 1.5;
+        const y = 0.25;
+        const z = 1.0;
+
         this.vertices = [
-            -1.5, -0.25,  1,  // 0: Front Bottom Left
-             1.5, -0.25,  1,  // 1: Front Bottom Right
-            -1.5,  0.25,  1,  // 2: Front Top Left
-             1.5,  0.25,  1,  // 3: Front Top Right
-            -1.5, -0.25, -1,  // 4: Back Bottom Left
-             1.5, -0.25, -1,  // 5: Back Bottom Right
-            -1.5,  0.25, -1,  // 6: Back Top Left
-             1.5,  0.25, -1   // 7: Back Top Right
+            // Front face (Z=1)
+            -x, -y, z, x, -y, z, -x, y, z, x, y, z,
+            // Back face (Z=-1)
+            -x, -y, -z, x, -y, -z, -x, y, -z, x, y, -z,
+            // Left face (X=-1.5)
+            -x, -y, -z, -x, -y, z, -x, y, -z, -x, y, z,
+            // Right face (X=1.5)
+            x, -y, -z, x, -y, z, x, y, -z, x, y, z,
+            // Top face (Y=0.25)
+            -x, y, z, x, y, z, -x, y, -z, x, y, -z,
+            // Bottom face (Y=-0.25)
+            -x, -y, z, x, -y, z, -x, -y, -z, x, -y, -z
         ];
 
         this.indices = [
-            0, 1, 2,  3, 2, 1, // Front
-            5, 4, 7,  6, 7, 4, // Back
-            4, 0, 6,  2, 6, 0, // Left
-            1, 5, 3,  7, 3, 5, // Right
-            2, 3, 6,  7, 6, 3, // Top
-            4, 5, 0,  1, 0, 5  // Bottom
+            // Front face (Z=1)
+            0, 1, 3, 0, 3, 2,
+            // Back face (Z=-1)
+            5, 4, 6, 5, 6, 7,
+            // Left face (X=-1.5)
+            8, 9, 11, 8, 11, 10,
+            // Right face (X=1.5)
+            13, 12, 14, 13, 14, 15,
+            // Top face (Y=0.25)
+            16, 17, 19, 16, 19, 18,
+            // Bottom face (Y=-0.25)
+            21, 20, 22, 21, 22, 23
         ];
 
-        // Basic normals (all pointing outwards)
         this.normals = [
-            -1, -1,  1,   1, -1,  1,  -1,  1,  1,   1,  1,  1,
-            -1, -1, -1,   1, -1, -1,  -1,  1, -1,   1,  1, -1
+            // Front
+            0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
+            // Back
+            0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1,
+            // Left
+            -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0,
+            // Right
+            1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
+            // Top
+            0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0,
+            // Bottom
+            0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0
         ];
 
-        this.texCoords = [
-            0, 1,  1, 1,  0, 0,  1, 0,
-            1, 1,  0, 1,  1, 0,  0, 0
-        ];
+        this.texCoords = [];
+        for (let i = 0; i < 6; i++) {
+            this.texCoords.push(0, 1, 1, 1, 0, 0, 1, 0);
+        }
 
         this.primitiveType = this.scene.gl.TRIANGLES;
         this.initGLBuffers();

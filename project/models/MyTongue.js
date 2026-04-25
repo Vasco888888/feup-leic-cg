@@ -1,4 +1,4 @@
-import { CGFobject, CGFappearance } from '../../lib/CGF.js';
+import { CGFobject, CGFappearance, CGFtexture } from '../../lib/CGF.js';
 
 /**
  * MyTongue
@@ -10,9 +10,13 @@ export class MyTongue extends CGFobject {
 
         this.material = new CGFappearance(scene);
         this.material.setAmbient(0.3, 0.2, 0.1, 1.0);
-        this.material.setDiffuse(0.6, 0.4, 0.2, 1.0);
+        this.material.setDiffuse(0.8, 0.8, 0.8, 1.0);
         this.material.setSpecular(0.1, 0.1, 0.1, 1.0);
         this.material.setShininess(5.0);
+
+        this.texture = new CGFtexture(scene, "textures/wagon/dark_oak.jpg");
+        this.material.setTexture(this.texture);
+        this.material.setTextureWrap('REPEAT', 'REPEAT');
     }
 
     initBuffers() {
