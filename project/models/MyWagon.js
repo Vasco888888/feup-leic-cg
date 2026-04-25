@@ -18,6 +18,7 @@ export class MyWagon extends CGFobject {
 
     display() {
         this.scene.pushMatrix();
+        this.scene.translate(0, 0.75, 0); 
         this.bed.display();
         this.scene.popMatrix();
 
