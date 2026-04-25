@@ -17,16 +17,16 @@ export class MyWagonBed extends CGFobject {
     }
 
     initBuffers() {
-        // A box with: Length 4 (X), Width 2 (Z), Height 0.5 (Y)
+        // A box with: Length 3 (X), Width 2 (Z), Height 0.5 (Y)
         this.vertices = [
-            -2, -0.25,  1,  // 0: Front Bottom Left
-             2, -0.25,  1,  // 1: Front Bottom Right
-            -2,  0.25,  1,  // 2: Front Top Left
-             2,  0.25,  1,  // 3: Front Top Right
-            -2, -0.25, -1,  // 4: Back Bottom Left
-             2, -0.25, -1,  // 5: Back Bottom Right
-            -2,  0.25, -1,  // 6: Back Top Left
-             2,  0.25, -1   // 7: Back Top Right
+            -1.5, -0.25,  1,  // 0: Front Bottom Left
+             1.5, -0.25,  1,  // 1: Front Bottom Right
+            -1.5,  0.25,  1,  // 2: Front Top Left
+             1.5,  0.25,  1,  // 3: Front Top Right
+            -1.5, -0.25, -1,  // 4: Back Bottom Left
+             1.5, -0.25, -1,  // 5: Back Bottom Right
+            -1.5,  0.25, -1,  // 6: Back Top Left
+             1.5,  0.25, -1   // 7: Back Top Right
         ];
 
         this.indices = [

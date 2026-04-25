@@ -19,14 +19,14 @@ export class MyWagon extends CGFobject {
     display() {
         // Bed (lifted up for wheels)
         this.scene.pushMatrix();
-        this.scene.translate(0, 0.75, 0); 
+        this.scene.translate(0, 0.75, 0);
         this.bed.display();
         this.scene.popMatrix();
 
         // 4 Wheels
-        const xPos = 1.5;
+        const xPos = 1.1;
         const zPos = 1.1;
-        
+
         // Front Wheels (Standard size)
         const frontY = 0.5;
         // Front Right
