@@ -119,4 +119,88 @@ export class MyFlower extends CGFobject {
 
     // ── Petal: elliptical/teardrop shape (fan of triangles) ──
 
+    _buildPetal() {
+        const l = this.petalLength;
+        const w = this.petalWidth / 2;
+        const segments = 10; // edge resolution
+
+        const verts = [];
+        const norms = [];
+        const texs = [];
+        const inds = [];
+
+        // Centre vertex (for fan triangulation)
+        verts.push(l * 0.45, 0, 0);
+        norms.push(0, 0, 1);
+        texs.push(0.45, 0.5);
+
+        // Edge vertices in a teardrop/ellipse shape
+        for (let i = 0; i <= segments; i++) {
+            const t = i / segments; // 0 → 1 around the edge
+            const angle = t * Math.PI * 2;
+
+            // Teardrop shape: narrower at base (t=0), wider in middle, pointed at tip
+            // X goes from 0 (base) to l (tip) and back
+            // Y follows a sine envelope modulated for teardrop
+            const x = l * (0.5 + 0.5 * Math.cos(angle + Math.PI));
+            const envelope = Math.pow(Math.sin(Math.PI * (x / l)), 0.7);
+            const y = w * Math.sin(angle) * envelope;
+
+            verts.push(x, y, 0);
+            norms.push(0, 0, 1);
+            texs.push(x / l, 0.5 - y / (2 * w));
+        }
+
+        // Fan triangles from centre (vertex 0) to edge vertices
+        for (let i = 1; i <= segments; i++) {
+            inds.push(0, i, i + 1);
+        }
+
+        return this._makeGeom(verts, norms, texs, inds);
+    }
+
+    _makeGeom(verts, norms, texs, inds) {
+        const g = new CGFobject(this.scene);
+        g.vertices = verts;
+        g.normals = norms;
+        g.texCoords = texs;
+        g.indices = inds;
+        g.primitiveType = this.scene.gl.TRIANGLES;
+        g.initGLBuffers();
+        return g;
+    }
+
+    display() {
+        const scene = this.scene;
+
+        // ── Draw stem ──
+        scene.pushMatrix();
+        // Stem colour (green)
+        scene.diffuseColor = [0.2, 0.5, 0.15, 1.0];
+        this.stemGeom.display();
+        scene.popMatrix();
+
+        // ── Draw flower head at top of stem ──
+        scene.pushMatrix();
+        scene.translate(0, this.stemHeight, 0);
+
+        // Tilt the flower slightly forward
+        scene.rotate(-Math.PI / 8, 1, 0, 0);
+
+        // ── Draw petals ──
+        const angleStep = (2 * Math.PI) / this.petalCount;
+        for (let i = 0; i < this.petalCount; i++) {
+            scene.pushMatrix();
+            scene.rotate(i * angleStep, 0, 1, 0);
+            // Tilt petal outward slightly
+            scene.rotate(Math.PI / 6, 0, 0, 1);
+            this.petalGeom.display();
+            scene.popMatrix();
+        }
+
+        // ── Draw receptacle (centre) ──
+        this.receptacleGeom.display();
+
+        scene.popMatrix();
+    }
 }
