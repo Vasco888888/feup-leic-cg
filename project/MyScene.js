@@ -1,6 +1,7 @@
 import { CGFscene, CGFcamera, CGFaxis, CGFappearance, CGFshader, CGFtexture } from "../lib/CGF.js";
 import { MySkyDome } from "./MySkyDome.js";
 import { MyPlane } from "./MyPlane.js";
+import { MyWagon } from "./models/MyWagon.js";
 
 export class MyScene extends CGFscene {
     constructor() {
@@ -39,6 +40,7 @@ export class MyScene extends CGFscene {
         this.axis = new CGFaxis(this, 8, 0.1);
         this.skyDome = new MySkyDome(this, 80, 28);
         this.floor = new MyPlane(this, 20);
+        this.wagon = new MyWagon(this);
 
         this.skyAppearance = new CGFappearance(this);
         this.skyAppearance.setAmbient(1.0, 1.0, 1.0, 1.0);
@@ -210,6 +212,8 @@ export class MyScene extends CGFscene {
         }
 
         this.displayFloor();
+
+        this.wagon.display();
 
         if (this.displayAxis) {
             this.axis.display();
