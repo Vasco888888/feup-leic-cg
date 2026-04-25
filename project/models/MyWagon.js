@@ -58,12 +58,13 @@ export class MyWagon extends CGFobject {
         this.wheel.display();
         this.scene.popMatrix();
 
-        // --- Cover and Tongue (TODO) ---
-        /*
+        // --- Cover and Tongue ---
         this.scene.pushMatrix();
+        this.scene.translate(0, 1.0, 0); // Centered on the bed
         this.cover.display();
         this.scene.popMatrix();
 
+        /*
         this.scene.pushMatrix();
         this.tongue.display();
         this.scene.popMatrix();
