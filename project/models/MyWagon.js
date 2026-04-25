@@ -64,10 +64,10 @@ export class MyWagon extends CGFobject {
         this.cover.display();
         this.scene.popMatrix();
 
-        /*
+        // --- Tongue ---
         this.scene.pushMatrix();
+        this.scene.translate(1.1, 0.5, 0);
         this.tongue.display();
         this.scene.popMatrix();
-        */
     }
 }

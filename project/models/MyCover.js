@@ -23,14 +23,14 @@ export class MyCover extends CGFobject {
         this.texCoords = [];
 
         const slices = 20;
-        const radiusZ = 1.1; // Slightly wider than bed
+        const radiusZ = 1.0;
         const radiusY = 1.4; // Taller arch
         const length = 3.0; // Full wagon length
         const hoops = 6; // Number of hoops
 
         for (let j = 0; j < hoops; j++) {
             let zOffset = (j * length / (hoops - 1)) - length / 2;
-            
+
             for (let i = 0; i <= slices; i++) {
                 let angle = (i * Math.PI) / slices;
                 let z = Math.cos(angle) * radiusZ;
