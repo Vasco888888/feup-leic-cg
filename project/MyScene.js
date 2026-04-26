@@ -116,6 +116,42 @@ export class MyScene extends CGFscene {
             this.lights[1].update();
         }
 
+        if (this.lights.length > 2) {
+            this.lights[2].setPosition(1.3, 1.3, 0.75, 1); // Lamp 1 position
+            this.lights[2].setAmbient(0, 0, 0, 1);
+            this.lights[2].setDiffuse(1.0, 0.7, 0.2, 1); // Warm light
+            this.lights[2].setSpecular(1.0, 0.7, 0.2, 1);
+            this.lights[2].setConstantAttenuation(0.1);
+            this.lights[2].setLinearAttenuation(0.2);
+            this.lights[2].setQuadraticAttenuation(0.1);
+            this.lights[2].disable();
+            this.lights[2].update();
+        }
+
+        if (this.lights.length > 3) {
+            this.lights[3].setPosition(1.3, 1.3, -0.75, 1); // Lamp 2 position
+            this.lights[3].setAmbient(0, 0, 0, 1);
+            this.lights[3].setDiffuse(1.0, 0.7, 0.2, 1); // Warm light
+            this.lights[3].setSpecular(1.0, 0.7, 0.2, 1);
+            this.lights[3].setConstantAttenuation(0.1);
+            this.lights[3].setLinearAttenuation(0.2);
+            this.lights[3].setQuadraticAttenuation(0.1);
+            this.lights[3].disable();
+            this.lights[3].update();
+        }
+
+        if (this.lights.length > 3) {
+            this.lights[3].setPosition(1.4, 1.45, -0.6, 1); // Lamp 2 position
+            this.lights[3].setAmbient(0, 0, 0, 1);
+            this.lights[3].setDiffuse(1.0, 0.7, 0.2, 1); // Warm light
+            this.lights[3].setSpecular(1.0, 0.7, 0.2, 1);
+            this.lights[3].setConstantAttenuation(0.1);
+            this.lights[3].setLinearAttenuation(0.2);
+            this.lights[3].setQuadraticAttenuation(0.1);
+            this.lights[3].disable();
+            this.lights[3].update();
+        }
+
         this.applyDynamicLighting();
     }
 
@@ -164,7 +200,17 @@ export class MyScene extends CGFscene {
             this.lights[0].setPosition(activeDir[0], activeDir[1], activeDir[2], 0);
             this.lights[0].setDiffuse(diffuseR, diffuseG, diffuseB, 1.0);
             this.lights[0].setSpecular(specR, specG, specB, 1.0);
-            this.lights[0].update();
+        }
+
+        if (this.lights.length > 2) {
+            // Lamp is on when sun is low
+            if (this.moonInfluence > 0.5) {
+                this.lights[2].enable();
+                if (this.lights.length > 3) this.lights[3].enable();
+            } else {
+                this.lights[2].disable();
+                if (this.lights.length > 3) this.lights[3].disable();
+            }
         }
     }
 
@@ -204,6 +250,13 @@ export class MyScene extends CGFscene {
             if (this.spotLightEnabled) this.lights[1].enable();
             else this.lights[1].disable();
             this.lights[1].update();
+        }
+
+        if (this.lights.length > 2) {
+            this.lights[2].update();
+        }
+        if (this.lights.length > 3) {
+            this.lights[3].update();
         }
     }
 

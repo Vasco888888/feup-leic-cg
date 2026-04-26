@@ -4,6 +4,7 @@ import { MyWagonBed } from './MyWagonBed.js';
 import { MyCover } from './MyCover.js';
 import { MyTongue } from './MyTongue.js';
 import { MySeat } from './MySeat.js';
+import { MyLamp } from './MyLamp.js';
 
 /**
  * MyWagon
@@ -16,6 +17,7 @@ export class MyWagon extends CGFobject {
         this.cover = new MyCover(scene);
         this.tongue = new MyTongue(scene);
         this.seat = new MySeat(scene);
+        this.lamp = new MyLamp(scene);
     }
 
     display() {
@@ -76,6 +78,19 @@ export class MyWagon extends CGFobject {
         this.scene.pushMatrix();
         this.scene.translate(1.1, 0.5, 0);
         this.tongue.display();
+        this.scene.popMatrix();
+
+        // --- Lamps ---
+        // Right side
+        this.scene.pushMatrix();
+        this.scene.translate(1.3, 1.1, 0.75); 
+        this.lamp.display();
+        this.scene.popMatrix();
+
+        // Left side
+        this.scene.pushMatrix();
+        this.scene.translate(1.3, 1.1, -0.75);
+        this.lamp.display();
         this.scene.popMatrix();
     }
 }
