@@ -1,4 +1,4 @@
-import { CGFobject } from "../lib/CGF.js";
+import { CGFobject } from "../../../lib/CGF.js";
 
 /**
  * Simple subdivided plane centered at origin in the XY plane.

@@ -1,4 +1,4 @@
-import { CGFappearance, CGFshader, CGFtexture } from "../lib/CGF.js";
+import { CGFappearance, CGFshader, CGFtexture } from "../../../lib/CGF.js";
 import { MyGrassPatch } from "./MyGrassPatch.js";
 
 /**

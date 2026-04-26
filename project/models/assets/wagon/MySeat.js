@@ -1,13 +1,14 @@
-import { CGFobject, CGFappearance, CGFtexture } from '../../../lib/CGF.js';
+import { CGFobject, CGFappearance, CGFtexture } from '../../../../lib/CGF.js';
 
 /**
- * MyTongue
+ * MySeat
  */
-export class MyTongue extends CGFobject {
+export class MySeat extends CGFobject {
     constructor(scene) {
         super(scene);
         this.initBuffers();
 
+        // Dark Oak Wood Material
         this.material = new CGFappearance(scene);
         this.material.setAmbient(0.3, 0.2, 0.1, 1.0);
         this.material.setDiffuse(0.8, 0.8, 0.8, 1.0);
@@ -24,11 +25,6 @@ export class MyTongue extends CGFobject {
         this.indices = [];
         this.normals = [];
         this.texCoords = [];
-
-        // Tongue properties
-        const length = 1.5;
-        const thick = 0.1;
-        const frontWidth = 0.8;
 
         // Helper to add a box with proper UVs and normals
         const addBox = (x, y, z, lx, ly, lz) => {
@@ -84,10 +80,10 @@ export class MyTongue extends CGFobject {
             }
         };
 
-        // Tongue
-        addBox(0, -thick/2, -thick/2, length, thick, thick);
-        // Front
-        addBox(length - thick, -thick/2, -frontWidth/2, thick, thick, frontWidth);
+        // Bench Seat
+        addBox(-0.1, 0, -0.9, 0.4, 0.1, 1.8);
+        // Backrest
+        addBox(-0.1, 0.1, -0.9, 0.1, 0.4, 1.8);
 
         this.primitiveType = this.scene.gl.TRIANGLES;
         this.initGLBuffers();

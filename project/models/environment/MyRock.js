@@ -1,4 +1,4 @@
-import { CGFobject } from "../lib/CGF.js";
+import { CGFobject } from "../../../lib/CGF.js";
 
 /**
  * Rock geometry — a sphere with procedural vertex perturbation

@@ -1,13 +1,13 @@
 import { CGFscene, CGFcamera, CGFaxis, CGFappearance, CGFshader, CGFtexture } from "../lib/CGF.js";
-import { MySkyDome } from "./MySkyDome.js";
-import { MyPlane } from "./MyPlane.js";
-import { MyWagon } from "./models/wagon/MyWagon.js";
-import { MyHayBale } from "./models/hay-bale/MyHayBale.js";
-import { MyBarn } from "./models/barn/MyBarn.js";
-import { MyTerrain } from "./MyTerrain.js";
-import { MyRockSet } from "./MyRockSet.js";
-import { MyFlowerSet } from "./MyFlowerSet.js";
-import { MyGrassSet } from "./MyGrassSet.js";
+import { MySkyDome } from "./models/environment/MySkyDome.js";
+import { MyPlane } from "./models/primitives/MyPlane.js";
+import { MyWagon } from "./models/assets/wagon/MyWagon.js";
+import { MyHayBale } from "./models/assets/hay-bale/MyHayBale.js";
+import { MyBarn } from "./models/assets/barn/MyBarn.js";
+import { MyTerrain } from "./models/environment/MyTerrain.js";
+import { MyRockSet } from "./models/environment/MyRockSet.js";
+import { MyFlowerSet } from "./models/environment/MyFlowerSet.js";
+import { MyGrassSet } from "./models/environment/MyGrassSet.js";
 
 export class MyScene extends CGFscene {
     constructor() {
