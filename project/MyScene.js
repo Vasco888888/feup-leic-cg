@@ -4,6 +4,10 @@ import { MyPlane } from "./MyPlane.js";
 import { MyWagon } from "./models/wagon/MyWagon.js";
 import { MyHayBale } from "./models/hay-bale/MyHayBale.js";
 import { MyBarn } from "./models/barn/MyBarn.js";
+import { MyTerrain } from "./MyTerrain.js";
+import { MyRockSet } from "./MyRockSet.js";
+import { MyFlowerSet } from "./MyFlowerSet.js";
+import { MyGrassSet } from "./MyGrassSet.js";
 
 export class MyScene extends CGFscene {
     constructor() {
@@ -12,6 +16,11 @@ export class MyScene extends CGFscene {
         this.displayAxis = true;
         this.showSky = true;
         this.showClouds = true;
+        this.showTerrain = true;
+        this.terrainWireframe = false;
+        this.showRocks = true;
+        this.showFlowers = true;
+        this.showGrass = true;
 
         this.sunLightEnabled = true;
         this.spotLightEnabled = false; // Disabled by default so the sun controls the lighting
@@ -49,6 +58,10 @@ export class MyScene extends CGFscene {
         this.hayBale = new MyHayBale(this);
         this.barn = new MyBarn(this);
         this.barnPos = { x: -20, z: -20 };
+        this.terrain = new MyTerrain(this, 128, 520, 22, 42);
+        this.rockSet = new MyRockSet(this, this.terrain, 30, 200, 123);
+        this.flowerSet = new MyFlowerSet(this, this.terrain, 50, 190, 777);
+        this.grassSet = new MyGrassSet(this, this.terrain, 40, 15, 190, 456);
 
         this.skyAppearance = new CGFappearance(this);
         this.skyAppearance.setAmbient(1.0, 1.0, 1.0, 1.0);
@@ -67,6 +80,24 @@ export class MyScene extends CGFscene {
         this.floorAppearance.setDiffuse(0.18, 0.62, 0.20, 1.0);
         this.floorAppearance.setSpecular(0.04, 0.10, 0.04, 1.0);
         this.floorAppearance.setShininess(12.0);
+
+        // ── Terrain appearance & shader ──
+        this.terrainAppearance = new CGFappearance(this);
+        this.terrainAppearance.setAmbient(0.8, 0.8, 0.8, 1.0);
+        this.terrainAppearance.setDiffuse(1.0, 1.0, 1.0, 1.0);
+        this.terrainAppearance.setSpecular(0.05, 0.05, 0.05, 1.0);
+        this.terrainAppearance.setShininess(8.0);
+
+        this.grassTexture = new CGFtexture(this, "textures/grass.png");
+        this.dirtTexture  = new CGFtexture(this, "textures/dirt.png");
+
+        this.terrainShader = new CGFshader(this.gl, "shaders/terrain.vert", "shaders/terrain.frag");
+        this.terrainShader.setUniformsValues({
+            uGrassTexture:  0,
+            uDirtTexture:   1,
+            uTerrainSize:   520.0,
+            uTerrainRadius: 255.0
+        });
 
         this.skyShader = new CGFshader(this.gl, "shaders/sky.vert", "shaders/sky.frag");
         this.moonTexture = new CGFtexture(this, "textures/environment/moon.jpg");
@@ -237,6 +268,8 @@ export class MyScene extends CGFscene {
         this.applyDynamicLighting();
 
         // Light direction and intensity are updated in applyDynamicLighting.
+        // Update grass wind animation
+        this.grassSet.update(t);
     }
 
     updateLightStates() {
@@ -307,6 +340,28 @@ export class MyScene extends CGFscene {
         this.popMatrix();
     }
 
+    displayTerrain() {
+        this.pushMatrix();
+
+        this.terrainAppearance.apply();
+        this.setActiveShader(this.terrainShader);
+
+        // Bind textures to the correct sampler units
+        this.grassTexture.bind(0);
+        this.dirtTexture.bind(1);
+
+        if (this.terrainWireframe) {
+            this.terrain.setLineMode();
+        } else {
+            this.terrain.setFillMode();
+        }
+
+        this.terrain.display();
+
+        this.setActiveShader(this.defaultShader);
+        this.popMatrix();
+    }
+
     display() {
         this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
@@ -323,7 +378,23 @@ export class MyScene extends CGFscene {
             this.gl.depthMask(true);
         }
 
-        this.displayFloor();
+        if (this.showTerrain) {
+            this.displayTerrain();
+        } else {
+            this.displayFloor();
+        }
+
+        if (this.showRocks) {
+            this.rockSet.display();
+        }
+
+        if (this.showFlowers) {
+            this.flowerSet.display();
+        }
+
+        if (this.showGrass) {
+            this.grassSet.display();
+        }
 
         this.wagon.display();
 
