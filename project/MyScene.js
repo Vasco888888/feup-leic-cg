@@ -63,7 +63,7 @@ export class MyScene extends CGFscene {
         this.floorAppearance.setShininess(12.0);
 
         this.skyShader = new CGFshader(this.gl, "shaders/sky.vert", "shaders/sky.frag");
-        this.moonTexture = new CGFtexture(this, "textures/moon.jpg");
+        this.moonTexture = new CGFtexture(this, "textures/environment/moon.jpg");
         this.skyShader.setUniformsValues({
             uSunDirection: this.sunDirection,
             uSunColor: [1.0, 0.92, 0.73],

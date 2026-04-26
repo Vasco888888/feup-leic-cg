@@ -15,7 +15,7 @@ export class MyHayBale extends CGFobject {
         this.hayMaterial.setSpecular(0.1, 0.1, 0.1, 1.0);
         this.hayMaterial.setShininess(1.0);
 
-        this.hayTexture = new CGFtexture(scene, "textures/hay_bale.jpg");
+        this.hayTexture = new CGFtexture(scene, "textures/assets/hay-bale/hay_bale.jpg");
         this.hayMaterial.setTexture(this.hayTexture);
         this.hayMaterial.setTextureWrap('REPEAT', 'REPEAT');
 
