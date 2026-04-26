@@ -312,6 +312,7 @@ export class MyScene extends CGFscene {
 
             this.cloudAppearance.apply();
             this.setActiveShader(this.cloudShader);
+            this.cloudShader.setUniformsValues({ uCloudOffset: this.cloudOffset });
             this.pushMatrix();
             // Draw clouds on a slightly inner shell to avoid z-overlap with the base sky.
             this.scale(0.985, 0.985, 0.985);
