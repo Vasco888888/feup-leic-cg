@@ -18,6 +18,13 @@ export class MyInterface extends CGFinterface {
         skyFolder.add(this.scene, "skyRadius", 120, 600).name("Sky Radius");
         skyFolder.add(this.scene, "cloudSpeed", 0.0, 0.08).name("Cloud Speed");
 
+        const terrainFolder = this.gui.addFolder("Terrain");
+        terrainFolder.add(this.scene, "showTerrain").name("Show Terrain");
+        terrainFolder.add(this.scene, "terrainWireframe").name("Wireframe");
+        terrainFolder.add(this.scene, "showRocks").name("Show Rocks");
+        terrainFolder.add(this.scene, "showFlowers").name("Show Flowers");
+        terrainFolder.add(this.scene, "showGrass").name("Show Grass");
+
         const lightFolder = this.gui.addFolder("Sun Lighting");
         lightFolder.add(this.scene, "sunLightEnabled").name("Directional Sun");
         lightFolder.add(this.scene, "spotLightEnabled").name("Spotlight");
