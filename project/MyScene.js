@@ -330,8 +330,8 @@ export class MyScene extends CGFscene {
     displayFloor() {
         this.pushMatrix();
 
-        // Put a large green floor slightly below origin.
-        this.translate(0, -0.02, 0);
+        // Put a large green floor slightly below the terrain base.
+        this.translate(0, -1.02, 0);
         this.rotate(-Math.PI / 2, 1, 0, 0);
         this.scale(650, 650, 1);
 
@@ -343,6 +343,9 @@ export class MyScene extends CGFscene {
 
     displayTerrain() {
         this.pushMatrix();
+
+        // Position terrain below the axis base
+        this.translate(0, -1.0, 0);
 
         this.terrainAppearance.apply();
         this.setActiveShader(this.terrainShader);
@@ -386,28 +389,40 @@ export class MyScene extends CGFscene {
         }
 
         if (this.showRocks) {
+            this.pushMatrix();
+            this.translate(0, -1.0, 0);
             this.rockSet.display();
+            this.popMatrix();
         }
 
         if (this.showFlowers) {
+            this.pushMatrix();
+            this.translate(0, -1.0, 0);
             this.flowerSet.display();
+            this.popMatrix();
         }
 
         if (this.showGrass) {
+            this.pushMatrix();
+            this.translate(0, -1.0, 0);
             this.grassSet.display();
+            this.popMatrix();
         }
 
+        this.pushMatrix();
+        this.translate(0, -1.0, 0);
         this.wagon.display();
+        this.popMatrix();
 
         // Display Barn
         this.pushMatrix();
-        this.translate(this.barnPos.x, 0, this.barnPos.z);
+        this.translate(this.barnPos.x, -1.0, this.barnPos.z);
         this.barn.display();
         this.popMatrix();
 
         // Display Hay Bale
         this.pushMatrix();
-        this.translate(5, 0.25, 5);
+        this.translate(5, -1.0 + 0.25, 5);
         this.hayBale.display();
         this.popMatrix();
 
