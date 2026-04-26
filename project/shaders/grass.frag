@@ -1,0 +1,28 @@
+#ifdef GL_ES
+precision highp float;
+#endif
+
+varying vec2 vTextureCoord;
+varying float vHeight;
+
+uniform vec3 uGrassColor;
+uniform int  uIsDead;
+
+void main() {
+    // Gradient: darker at base, lighter at tip
+    vec3 baseColor = uGrassColor * 0.6;
+    vec3 tipColor  = uGrassColor * 1.3;
+
+    vec3 bladeColor = mix(baseColor, tipColor, vHeight);
+
+    // Dead grass: desaturate and yellow shift
+    if (uIsDead == 1) {
+        float grey = dot(bladeColor, vec3(0.3, 0.5, 0.2));
+        bladeColor = mix(bladeColor, vec3(grey * 1.1, grey * 0.95, grey * 0.5), 0.6);
+    }
+
+    // Simple lighting (ambient + slight top brightening)
+    float light = 0.55 + vHeight * 0.45;
+
+    gl_FragColor = vec4(bladeColor * light, 1.0);
+}
