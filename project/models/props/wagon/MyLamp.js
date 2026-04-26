@@ -17,7 +17,7 @@ export class MyLamp extends CGFobject {
         this.ironMaterial.setDiffuse(0.6, 0.6, 0.6, 1.0);
         this.ironMaterial.setSpecular(0.4, 0.4, 0.4, 1.0);
         this.ironMaterial.setShininess(20.0);
-        this.ironTexture = new CGFtexture(scene, "textures/assets/wagon/worn_iron_wheel.jpg");
+        this.ironTexture = new CGFtexture(scene, "textures/props/wagon/worn_iron_wheel.jpg");
         this.ironMaterial.setTexture(this.ironTexture);
 
         // Glass Material (Emissive)

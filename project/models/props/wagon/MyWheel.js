@@ -15,7 +15,7 @@ export class MyWheel extends CGFobject {
         this.material.setSpecular(0.2, 0.2, 0.2, 1.0);
         this.material.setShininess(10.0);
 
-        this.texture = new CGFtexture(scene, "textures/assets/wagon/worn_iron_wheel.jpg");
+        this.texture = new CGFtexture(scene, "textures/props/wagon/worn_iron_wheel.jpg");
         this.material.setTexture(this.texture);
         this.material.setTextureWrap('REPEAT', 'REPEAT');
     }

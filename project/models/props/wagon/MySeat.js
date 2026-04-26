@@ -15,7 +15,7 @@ export class MySeat extends CGFobject {
         this.material.setSpecular(0.1, 0.1, 0.1, 1.0);
         this.material.setShininess(5.0);
 
-        this.texture = new CGFtexture(scene, "textures/assets/wagon/dark_oak.jpg");
+        this.texture = new CGFtexture(scene, "textures/props/wagon/dark_oak.jpg");
         this.material.setTexture(this.texture);
         this.material.setTextureWrap('REPEAT', 'REPEAT');
     }

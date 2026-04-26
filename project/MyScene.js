@@ -1,9 +1,9 @@
 import { CGFscene, CGFcamera, CGFaxis, CGFappearance, CGFshader, CGFtexture } from "../lib/CGF.js";
 import { MySkyDome } from "./models/environment/MySkyDome.js";
 import { MyPlane } from "./models/primitives/MyPlane.js";
-import { MyWagon } from "./models/assets/wagon/MyWagon.js";
-import { MyHayBale } from "./models/assets/hay-bale/MyHayBale.js";
-import { MyBarn } from "./models/assets/barn/MyBarn.js";
+import { MyWagon } from "./models/props/wagon/MyWagon.js";
+import { MyHayBale } from "./models/props/hay-bale/MyHayBale.js";
+import { MyBarn } from "./models/props/barn/MyBarn.js";
 import { MyTerrain } from "./models/environment/MyTerrain.js";
 import { MyRockSet } from "./models/environment/MyRockSet.js";
 import { MyFlowerSet } from "./models/environment/MyFlowerSet.js";

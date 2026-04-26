@@ -15,7 +15,7 @@ export class MyCover extends CGFobject {
         this.material.setSpecular(0.1, 0.1, 0.1, 1.0);
         this.material.setShininess(1.0);
 
-        this.texture = new CGFtexture(scene, "textures/assets/wagon/burlap_cover.jpg");
+        this.texture = new CGFtexture(scene, "textures/props/wagon/burlap_cover.jpg");
         this.material.setTexture(this.texture);
         this.material.setTextureWrap('REPEAT', 'REPEAT');
     }

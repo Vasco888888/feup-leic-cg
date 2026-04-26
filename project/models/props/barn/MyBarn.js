@@ -14,7 +14,7 @@ export class MyBarn extends CGFobject {
         this.wallMaterial.setDiffuse(1.0, 1.0, 1.0, 1.0);
         this.wallMaterial.setSpecular(0.1, 0.1, 0.1, 1.0);
         this.wallMaterial.setShininess(5.0);
-        this.wallTexture = new CGFtexture(scene, "textures/assets/barn/reclaimed_wood_planks_sundance_red_finish_wall.jpg");
+        this.wallTexture = new CGFtexture(scene, "textures/props/barn/reclaimed_wood_planks_sundance_red_finish_wall.jpg");
         this.wallMaterial.setTexture(this.wallTexture);
 
         // Front Door Material
@@ -23,7 +23,7 @@ export class MyBarn extends CGFobject {
         this.doorMaterial.setDiffuse(1.0, 1.0, 1.0, 1.0);
         this.doorMaterial.setSpecular(0.1, 0.1, 0.1, 1.0);
         this.doorMaterial.setShininess(5.0);
-        this.doorTexture = new CGFtexture(scene, "textures/assets/barn/rustic_barn_door.jpg");
+        this.doorTexture = new CGFtexture(scene, "textures/props/barn/rustic_barn_door.jpg");
         this.doorMaterial.setTexture(this.doorTexture);
 
         // Roof Material
@@ -31,7 +31,7 @@ export class MyBarn extends CGFobject {
         this.roofMaterial.setAmbient(0.20, 0.20, 0.20, 1.0);
         this.roofMaterial.setDiffuse(1.0, 1.0, 1.0, 1.0);
         this.roofMaterial.setSpecular(0.1, 0.1, 0.1, 1.0);
-        this.roofTexture = new CGFtexture(scene, "textures/assets/barn/wood_shingle_roof.jpg");
+        this.roofTexture = new CGFtexture(scene, "textures/props/barn/wood_shingle_roof.jpg");
         this.roofMaterial.setTexture(this.roofTexture);
         this.roofMaterial.setTextureWrap('REPEAT', 'REPEAT');
 
