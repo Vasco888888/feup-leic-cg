@@ -26,10 +26,60 @@ export class MyCover extends CGFobject {
         this.normals = [];
         this.texCoords = [];
 
+        // Dimensions
+        const length = 3.0;
+        const height = 1.4;
+        const radius = 1.0;
         const slices = 20;
+        const hoopsCount = 6;
+
+        // --- Helper: Add an Arch for openings ---
+        const addArch = (xPos, depth) => {
+            let s = this.vertices.length / 3;
+            const outerScale = 1.08;
+
+            for (let i = 0; i <= slices; i++) {
+                let angle = (i * Math.PI) / slices;
+                let z = Math.cos(angle) * radius;
+                let y = Math.sin(angle) * height;
+
+                // Vertices
+                this.vertices.push(xPos, y, z); // Inner
+                this.vertices.push(xPos, y * outerScale, z * outerScale); // Outer
+                this.vertices.push(xPos + depth, y, z); // Inner Depth
+                this.vertices.push(xPos + depth, y * outerScale, z * outerScale); // Outer Depth
+
+                // Normals (Facing Out/In along X)
+                let nx = xPos > 0 ? 1 : -1;
+                this.normals.push(nx, 0, 0, nx, 0, 0, -nx, 0, 0, -nx, 0, 0);
+
+                // UVs
+                let u = i / slices;
+                this.texCoords.push(u, 1, u, 0, u, 1, u, 0);
+            }
+
+            for (let i = 0; i < slices; i++) {
+                let b = s + i * 4;
+                // Front face
+                this.indices.push(b, b + 1, b + 5, b, b + 5, b + 4);
+                this.indices.push(b + 4, b + 5, b + 1, b + 4, b + 1, b);
+                // Back face
+                this.indices.push(b + 2, b + 7, b + 3, b + 2, b + 6, b + 7);
+                this.indices.push(b + 7, b + 6, b + 2, b + 3, b + 7, b + 2);
+                // Outer Edge
+                this.indices.push(b + 1, b + 3, b + 7, b + 1, b + 7, b + 5);
+                this.indices.push(b + 5, b + 7, b + 3, b + 5, b + 3, b + 1);
+            }
+        };
+
+        // Front Arch (Folds Inwards)
+        addArch(length / 2, -0.1);
+        // Back Arch (Folds Inwards)
+        addArch(-length / 2, 0.1);
+
+        // --- Main Cover ---
         const radiusZ = 1.0;
         const radiusY = 1.4; // Taller arch
-        const length = 3.0; // Full wagon length
         const hoops = 6; // Number of hoops
 
         for (let j = 0; j < hoops; j++) {
@@ -53,10 +103,11 @@ export class MyCover extends CGFobject {
         }
 
         // Indices for the cloth sections
+        const vertexOffset = (slices + 1) * 4 * 2; // Offset from the two arches
         for (let j = 0; j < hoops - 1; j++) {
             for (let i = 0; i < slices; i++) {
-                let current = j * (slices + 1) * 2 + i * 2;
-                let next = (j + 1) * (slices + 1) * 2 + i * 2;
+                let current = vertexOffset + j * (slices + 1) * 2 + i * 2;
+                let next = vertexOffset + (j + 1) * (slices + 1) * 2 + i * 2;
 
                 // Outside
                 this.indices.push(current, next, current + 2);
