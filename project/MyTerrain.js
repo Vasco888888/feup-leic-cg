@@ -105,7 +105,14 @@ export class MyTerrain extends CGFobject {
         // Flatten the edges so terrain blends into the horizon.
         const edgeFade = this._edgeFade(u, v);
 
-        return h * this.maxHeight * edgeFade;
+        // Center heights around 0 so terrain has both hills and valleys.
+        const centered = (h - 0.5) * 2.0;
+
+        // Keep strong interior relief, but gently lift the border ring so
+        // deep valleys do not create visible horizon gaps.
+        const interiorHeight = centered * this.maxHeight * edgeFade;
+        const borderLift = (1.0 - edgeFade) * (this.maxHeight * 0.10);
+        return interiorHeight + borderLift;
     }
 
     /**

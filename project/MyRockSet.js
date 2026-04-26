@@ -37,8 +37,8 @@ export class MyRockSet {
 
         // Load multiple rock textures
         this.rockTextures = [
-            new CGFtexture(scene, "textures/rock1.png"),
-            new CGFtexture(scene, "textures/rock2.png"),
+            new CGFtexture(scene, "textures/environment/rocks/rock1.png"),
+            new CGFtexture(scene, "textures/environment/rocks/rock2.png"),
         ];
 
         // Rock material

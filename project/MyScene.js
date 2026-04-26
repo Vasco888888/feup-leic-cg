@@ -28,6 +28,7 @@ export class MyScene extends CGFscene {
         this.cloudSpeed = 0.01;
         this.cloudOffset = 0.0;
         this.skyRadius = 260.0;
+        this.terrainYOffset = 0.0;
 
         this.sunDirection = vec3.fromValues(-0.35, 0.72, 0.60);
         this.moonDirection = vec3.fromValues(0.35, -0.72, -0.60);
@@ -58,7 +59,7 @@ export class MyScene extends CGFscene {
         this.hayBale = new MyHayBale(this);
         this.barn = new MyBarn(this);
         this.barnPos = { x: -20, z: -20 };
-        this.terrain = new MyTerrain(this, 128, 520, 22, 42);
+        this.terrain = new MyTerrain(this, 128, 520, 10, 42);
         this.rockSet = new MyRockSet(this, this.terrain, 30, 200, 123);
         this.flowerSet = new MyFlowerSet(this, this.terrain, 50, 190, 777);
         this.grassSet = new MyGrassSet(this, this.terrain, 40, 15, 190, 456);
@@ -88,19 +89,22 @@ export class MyScene extends CGFscene {
         this.terrainAppearance.setSpecular(0.05, 0.05, 0.05, 1.0);
         this.terrainAppearance.setShininess(8.0);
 
-        this.grassTexture = new CGFtexture(this, "textures/grass.png");
-        this.dirtTexture  = new CGFtexture(this, "textures/dirt.png");
+        this.grassTexture = new CGFtexture(this, "textures/environment/terrain/grass.jpeg");
+        this.dirtTexture  = new CGFtexture(this, "textures/environment/terrain/dirt.png");
 
         this.terrainShader = new CGFshader(this.gl, "shaders/terrain.vert", "shaders/terrain.frag");
         this.terrainShader.setUniformsValues({
             uGrassTexture:  0,
             uDirtTexture:   1,
             uTerrainSize:   520.0,
-            uTerrainRadius: 255.0
+            uTerrainRadius: 255.0,
+            uLightDir: this.sunDirection,
+            uAmbientStrength: 0.18,
+            uDiffuseStrength: 0.65
         });
 
         this.skyShader = new CGFshader(this.gl, "shaders/sky.vert", "shaders/sky.frag");
-        this.moonTexture = new CGFtexture(this, "textures/environment/moon.jpg");
+        this.moonTexture = new CGFtexture(this, "textures/environment/sky/moon.jpg");
         this.skyShader.setUniformsValues({
             uSunDirection: this.sunDirection,
             uSunColor: [1.0, 0.92, 0.73],
@@ -205,6 +209,8 @@ export class MyScene extends CGFscene {
         const ambientB = ambientNight[2] + (ambientDay[2] - ambientNight[2]) * this.sunInfluence;
         this.setGlobalAmbientLight(ambientR, ambientG, ambientB, 1.0);
 
+        let activeDir = this.sunDirection;
+
         if (this.lights.length > 0) {
             const dayStrength = 0.25 + 0.95 * this.sunInfluence;
             const twilightWarmth = 1.0 - this.smoothstep(0.05, 0.45, sunElevation);
@@ -227,10 +233,20 @@ export class MyScene extends CGFscene {
             const specG = (daySpec * 0.95) * this.sunInfluence + (moonSpec * 1.05) * this.moonInfluence;
             const specB = (daySpec * 0.85) * this.sunInfluence + (moonSpec * 1.20) * this.moonInfluence;
 
-            const activeDir = (this.sunInfluence >= this.moonInfluence) ? this.sunDirection : this.moonDirection;
+            activeDir = (this.sunInfluence >= this.moonInfluence) ? this.sunDirection : this.moonDirection;
             this.lights[0].setPosition(activeDir[0], activeDir[1], activeDir[2], 0);
             this.lights[0].setDiffuse(diffuseR, diffuseG, diffuseB, 1.0);
             this.lights[0].setSpecular(specR, specG, specB, 1.0);
+        }
+
+        if (this.terrainShader) {
+            const terrainAmbient = 0.08 + 0.22 * this.sunInfluence;
+            const terrainDiffuse = 0.08 + 0.57 * this.sunInfluence;
+            this.terrainShader.setUniformsValues({
+                uLightDir: activeDir,
+                uAmbientStrength: terrainAmbient,
+                uDiffuseStrength: terrainDiffuse
+            });
         }
 
         if (this.lights.length > 2) {
@@ -268,8 +284,8 @@ export class MyScene extends CGFscene {
         this.applyDynamicLighting();
 
         // Light direction and intensity are updated in applyDynamicLighting.
-        // Update grass wind animation
-        this.grassSet.update(t);
+        // Update grass wind animation and day/night shading.
+        this.grassSet.update(t, this.sunInfluence);
     }
 
     updateLightStates() {
@@ -331,7 +347,7 @@ export class MyScene extends CGFscene {
         this.pushMatrix();
 
         // Put a large green floor slightly below the terrain base.
-        this.translate(0, -1.02, 0);
+        this.translate(0, this.terrainYOffset - 0.02, 0);
         this.rotate(-Math.PI / 2, 1, 0, 0);
         this.scale(650, 650, 1);
 
@@ -345,7 +361,7 @@ export class MyScene extends CGFscene {
         this.pushMatrix();
 
         // Position terrain below the axis base
-        this.translate(0, -1.0, 0);
+        this.translate(0, this.terrainYOffset, 0);
 
         this.terrainAppearance.apply();
         this.setActiveShader(this.terrainShader);
@@ -390,39 +406,39 @@ export class MyScene extends CGFscene {
 
         if (this.showRocks) {
             this.pushMatrix();
-            this.translate(0, -1.0, 0);
+            this.translate(0, this.terrainYOffset, 0);
             this.rockSet.display();
             this.popMatrix();
         }
 
         if (this.showFlowers) {
             this.pushMatrix();
-            this.translate(0, -1.0, 0);
+            this.translate(0, this.terrainYOffset, 0);
             this.flowerSet.display();
             this.popMatrix();
         }
 
         if (this.showGrass) {
             this.pushMatrix();
-            this.translate(0, -1.0, 0);
+            this.translate(0, this.terrainYOffset, 0);
             this.grassSet.display();
             this.popMatrix();
         }
 
         this.pushMatrix();
-        this.translate(0, -1.0, 0);
+        this.translate(0, this.terrainYOffset, 0);
         this.wagon.display();
         this.popMatrix();
 
         // Display Barn
         this.pushMatrix();
-        this.translate(this.barnPos.x, -1.0, this.barnPos.z);
+        this.translate(this.barnPos.x, this.terrainYOffset, this.barnPos.z);
         this.barn.display();
         this.popMatrix();
 
         // Display Hay Bale
         this.pushMatrix();
-        this.translate(5, -1.0 + 0.25, 5);
+        this.translate(5, this.terrainYOffset + 0.25, 5);
         this.hayBale.display();
         this.popMatrix();
 

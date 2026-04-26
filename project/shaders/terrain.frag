@@ -10,6 +10,9 @@ uniform sampler2D uGrassTexture;
 uniform sampler2D uDirtTexture;
 uniform float     uTerrainSize;
 uniform float     uTerrainRadius;
+uniform vec3      uLightDir;
+uniform float     uAmbientStrength;
+uniform float     uDiffuseStrength;
 
 // ────────── Noise helpers ──────────
 
@@ -72,7 +75,7 @@ void main() {
 
     // Tile UVs for texture repetition over the terrain
     float tilingFactor = 40.0;
-    vec2 tiledUV = vTextureCoord * tilingFactor;
+    vec2 tiledUV = fract(vTextureCoord * tilingFactor);
 
     vec4 grassColor = texture2D(uGrassTexture, tiledUV);
     vec4 dirtColor  = texture2D(uDirtTexture, tiledUV);
@@ -101,10 +104,10 @@ void main() {
     vec3 edgeColor = vec3(0.28, 0.42, 0.18);
     groundColor.rgb = mix(edgeColor, groundColor.rgb, edgeFade);
 
-    // ── Lighting ──
-    float ambient = 0.45;
-    float diffuse = max(dot(normalize(vNormal), normalize(vec3(0.4, 0.8, -0.3))), 0.0);
-    float light = ambient + diffuse * 0.55;
+    // ── Lighting (driven by day/night cycle uniforms) ──
+    float ambient = uAmbientStrength;
+    float diffuse = max(dot(normalize(vNormal), normalize(uLightDir)), 0.0);
+    float light = ambient + diffuse * uDiffuseStrength;
 
     gl_FragColor = vec4(groundColor.rgb * light, 1.0);
 }

@@ -27,7 +27,8 @@ export class MyGrassSet {
             uTime: 0,
             uWindStrength: 0.15,
             uGrassColor: [0.25, 0.55, 0.15],
-            uIsDead: 0
+            uIsDead: 0,
+            uSunInfluence: 1.0
         });
 
         // Grass appearance (no texture needed — shader colours it)
@@ -81,8 +82,11 @@ export class MyGrassSet {
         return placements;
     }
 
-    update(t) {
-        this.grassShader.setUniformsValues({ uTime: t / 1000.0 });
+    update(t, sunInfluence = 1.0) {
+        this.grassShader.setUniformsValues({
+            uTime: t / 1000.0,
+            uSunInfluence: sunInfluence
+        });
     }
 
     display() {

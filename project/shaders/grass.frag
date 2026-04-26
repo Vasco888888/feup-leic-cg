@@ -7,6 +7,7 @@ varying float vHeight;
 
 uniform vec3 uGrassColor;
 uniform int  uIsDead;
+uniform float uSunInfluence;
 
 void main() {
     // Gradient: darker at base, lighter at tip
@@ -21,8 +22,10 @@ void main() {
         bladeColor = mix(bladeColor, vec3(grey * 1.1, grey * 0.95, grey * 0.5), 0.6);
     }
 
-    // Simple lighting (ambient + slight top brightening)
-    float light = 0.55 + vHeight * 0.45;
+    // Day/night lighting: darker at night, brighter in daytime.
+    float ambient = mix(0.10, 0.45, uSunInfluence);
+    float tipBoost = mix(0.15, 0.45, uSunInfluence) * vHeight;
+    float light = ambient + tipBoost;
 
     gl_FragColor = vec4(bladeColor * light, 1.0);
 }

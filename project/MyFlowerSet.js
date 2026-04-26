@@ -48,7 +48,7 @@ export class MyFlowerSet {
         this._generateFlowers();
 
         // Appearances for petals and stems
-        this.petalTexture = new CGFtexture(scene, "textures/petal.png");
+        this.petalTexture = new CGFtexture(scene, "textures/environment/flora/petal.png");
 
         this.petalAppearance = new CGFappearance(scene);
         this.petalAppearance.setTexture(this.petalTexture);
