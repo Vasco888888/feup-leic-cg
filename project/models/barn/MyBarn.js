@@ -10,7 +10,7 @@ export class MyBarn extends CGFobject {
 
         // Wall Material (Red Planks)
         this.wallMaterial = new CGFappearance(scene);
-        this.wallMaterial.setAmbient(0.6, 0.6, 0.6, 1.0);
+        this.wallMaterial.setAmbient(0.22, 0.22, 0.22, 1.0);
         this.wallMaterial.setDiffuse(1.0, 1.0, 1.0, 1.0);
         this.wallMaterial.setSpecular(0.1, 0.1, 0.1, 1.0);
         this.wallMaterial.setShininess(5.0);
@@ -19,7 +19,7 @@ export class MyBarn extends CGFobject {
 
         // Front Door Material
         this.doorMaterial = new CGFappearance(scene);
-        this.doorMaterial.setAmbient(0.6, 0.6, 0.6, 1.0);
+        this.doorMaterial.setAmbient(0.22, 0.22, 0.22, 1.0);
         this.doorMaterial.setDiffuse(1.0, 1.0, 1.0, 1.0);
         this.doorMaterial.setSpecular(0.1, 0.1, 0.1, 1.0);
         this.doorMaterial.setShininess(5.0);
@@ -28,7 +28,7 @@ export class MyBarn extends CGFobject {
 
         // Roof Material
         this.roofMaterial = new CGFappearance(scene);
-        this.roofMaterial.setAmbient(0.6, 0.6, 0.6, 1.0);
+        this.roofMaterial.setAmbient(0.20, 0.20, 0.20, 1.0);
         this.roofMaterial.setDiffuse(1.0, 1.0, 1.0, 1.0);
         this.roofMaterial.setSpecular(0.1, 0.1, 0.1, 1.0);
         this.roofTexture = new CGFtexture(scene, "textures/assets/barn/wood_shingle_roof.jpg");

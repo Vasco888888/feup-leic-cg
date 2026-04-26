@@ -14,15 +14,18 @@ export class MyScene extends CGFscene {
         this.showClouds = true;
 
         this.sunLightEnabled = true;
-        this.spotLightEnabled = true;
+        this.spotLightEnabled = false; // Disabled by default so the sun controls the lighting
 
         this.cloudSpeed = 0.01;
         this.cloudOffset = 0.0;
         this.skyRadius = 260.0;
 
-        this.sunDirection = vec3.fromValues(-0.35, 0.72, -0.60);
+        this.sunDirection = vec3.fromValues(-0.35, 0.72, 0.60);
+        this.moonDirection = vec3.fromValues(0.35, -0.72, -0.60);
         this.dayCycleSpeed = 0.2;
         this.dayTime = 0;
+        this.sunInfluence = 1.0;
+        this.moonInfluence = 0.0;
     }
 
     init(application) {
@@ -90,13 +93,13 @@ export class MyScene extends CGFscene {
     }
 
     initLights() {
-        this.setGlobalAmbientLight(0.3, 0.3, 0.35, 1.0);
+        this.setGlobalAmbientLight(0.18, 0.18, 0.20, 1.0);
 
         if (this.lights.length > 0) {
             this.lights[0].setPosition(this.sunDirection[0], this.sunDirection[1], this.sunDirection[2], 0);
-            this.lights[0].setAmbient(0.4, 0.4, 0.45, 1.0);
+            this.lights[0].setAmbient(0.0, 0.0, 0.0, 1.0);
             this.lights[0].setDiffuse(1.00, 0.95, 0.80, 1.0);
-            this.lights[0].setSpecular(1.00, 0.90, 0.75, 1.0);
+            this.lights[0].setSpecular(0.90, 0.82, 0.70, 1.0);
             this.lights[0].enable();
             this.lights[0].update();
         }
@@ -112,6 +115,57 @@ export class MyScene extends CGFscene {
             this.lights[1].enable();
             this.lights[1].update();
         }
+
+        this.applyDynamicLighting();
+    }
+
+    smoothstep(edge0, edge1, x) {
+        const t = Math.max(0.0, Math.min(1.0, (x - edge0) / (edge1 - edge0)));
+        return t * t * (3.0 - 2.0 * t);
+    }
+
+    applyDynamicLighting() {
+        const sunElevation = this.sunDirection[1];
+
+        // Sun and moon are blended through twilight so transitions are gradual.
+        this.sunInfluence = this.smoothstep(-0.12, 0.32, sunElevation);
+        this.moonInfluence = 1.0 - this.smoothstep(-0.32, 0.12, sunElevation);
+
+        const ambientNight = [0.10, 0.11, 0.16];
+        const ambientDay = [0.24, 0.24, 0.22];
+        const ambientR = ambientNight[0] + (ambientDay[0] - ambientNight[0]) * this.sunInfluence;
+        const ambientG = ambientNight[1] + (ambientDay[1] - ambientNight[1]) * this.sunInfluence;
+        const ambientB = ambientNight[2] + (ambientDay[2] - ambientNight[2]) * this.sunInfluence;
+        this.setGlobalAmbientLight(ambientR, ambientG, ambientB, 1.0);
+
+        if (this.lights.length > 0) {
+            const dayStrength = 0.25 + 0.95 * this.sunInfluence;
+            const twilightWarmth = 1.0 - this.smoothstep(0.05, 0.45, sunElevation);
+            const dayColor = [
+                1.0,
+                0.86 + 0.10 * (1.0 - twilightWarmth),
+                0.64 + 0.22 * (1.0 - twilightWarmth)
+            ];
+
+            const moonStrength = 0.08 + 0.24 * this.moonInfluence;
+            const moonColor = [0.38, 0.46, 0.62];
+
+            const diffuseR = dayColor[0] * dayStrength * this.sunInfluence + moonColor[0] * moonStrength * this.moonInfluence;
+            const diffuseG = dayColor[1] * dayStrength * this.sunInfluence + moonColor[1] * moonStrength * this.moonInfluence;
+            const diffuseB = dayColor[2] * dayStrength * this.sunInfluence + moonColor[2] * moonStrength * this.moonInfluence;
+
+            const daySpec = 0.05 + 0.80 * this.sunInfluence;
+            const moonSpec = 0.02 + 0.10 * this.moonInfluence;
+            const specR = daySpec * this.sunInfluence + moonSpec * this.moonInfluence;
+            const specG = (daySpec * 0.95) * this.sunInfluence + (moonSpec * 1.05) * this.moonInfluence;
+            const specB = (daySpec * 0.85) * this.sunInfluence + (moonSpec * 1.20) * this.moonInfluence;
+
+            const activeDir = (this.sunInfluence >= this.moonInfluence) ? this.sunDirection : this.moonDirection;
+            this.lights[0].setPosition(activeDir[0], activeDir[1], activeDir[2], 0);
+            this.lights[0].setDiffuse(diffuseR, diffuseG, diffuseB, 1.0);
+            this.lights[0].setSpecular(specR, specG, specB, 1.0);
+            this.lights[0].update();
+        }
     }
 
     update(t) {
@@ -119,7 +173,7 @@ export class MyScene extends CGFscene {
         this.sunDirection = vec3.fromValues(
             Math.cos(this.dayTime),
             Math.sin(this.dayTime),
-            -0.6
+            0.6
         );
         this.moonDirection = vec3.fromValues(
             -this.sunDirection[0],
@@ -134,11 +188,9 @@ export class MyScene extends CGFscene {
             uMoonDirection: this.moonDirection
         });
 
-        // Sync Light 0 with moving Sun
-        if (this.lights.length > 0) {
-            this.lights[0].setPosition(this.sunDirection[0], this.sunDirection[1], this.sunDirection[2], 0);
-            this.lights[0].update();
-        }
+        this.applyDynamicLighting();
+
+        // Light direction and intensity are updated in applyDynamicLighting.
     }
 
     updateLightStates() {
