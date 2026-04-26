@@ -1,8 +1,9 @@
 import { CGFscene, CGFcamera, CGFaxis, CGFappearance, CGFshader, CGFtexture } from "../lib/CGF.js";
 import { MySkyDome } from "./MySkyDome.js";
 import { MyPlane } from "./MyPlane.js";
-import { MyWagon } from "./models/MyWagon.js";
-import { MyHayBale } from "./models/MyHayBale.js";
+import { MyWagon } from "./models/wagon/MyWagon.js";
+import { MyHayBale } from "./models/hay-bale/MyHayBale.js";
+import { MyBarn } from "./models/barn/MyBarn.js";
 
 export class MyScene extends CGFscene {
     constructor() {
@@ -43,6 +44,8 @@ export class MyScene extends CGFscene {
         this.floor = new MyPlane(this, 20);
         this.wagon = new MyWagon(this);
         this.hayBale = new MyHayBale(this);
+        this.barn = new MyBarn(this);
+        this.barnPos = { x: -20, z: -20 };
 
         this.skyAppearance = new CGFappearance(this);
         this.skyAppearance.setAmbient(1.0, 1.0, 1.0, 1.0);
@@ -87,9 +90,11 @@ export class MyScene extends CGFscene {
     }
 
     initLights() {
+        this.setGlobalAmbientLight(0.3, 0.3, 0.35, 1.0);
+
         if (this.lights.length > 0) {
             this.lights[0].setPosition(this.sunDirection[0], this.sunDirection[1], this.sunDirection[2], 0);
-            this.lights[0].setAmbient(0.20, 0.20, 0.24, 1.0);
+            this.lights[0].setAmbient(0.4, 0.4, 0.45, 1.0);
             this.lights[0].setDiffuse(1.00, 0.95, 0.80, 1.0);
             this.lights[0].setSpecular(1.00, 0.90, 0.75, 1.0);
             this.lights[0].enable();
@@ -124,15 +129,16 @@ export class MyScene extends CGFscene {
 
         this.cloudOffset = ((t / 1000.0) * this.cloudSpeed) % 1000.0;
         
-        this.cloudShader.setUniformsValues({ 
-            uCloudOffset: this.cloudOffset,
-            uSunDirection: this.sunDirection
-        });
-        
         this.skyShader.setUniformsValues({ 
             uSunDirection: this.sunDirection,
             uMoonDirection: this.moonDirection
         });
+
+        // Sync Light 0 with moving Sun
+        if (this.lights.length > 0) {
+            this.lights[0].setPosition(this.sunDirection[0], this.sunDirection[1], this.sunDirection[2], 0);
+            this.lights[0].update();
+        }
     }
 
     updateLightStates() {
@@ -182,7 +188,6 @@ export class MyScene extends CGFscene {
         this.setActiveShader(this.defaultShader);
         this.popMatrix();
     }
-
     displayFloor() {
         this.pushMatrix();
 
@@ -217,6 +222,13 @@ export class MyScene extends CGFscene {
 
         this.wagon.display();
 
+        // Display Barn
+        this.pushMatrix();
+        this.translate(this.barnPos.x, 0, this.barnPos.z);
+        this.barn.display();
+        this.popMatrix();
+
+        // Display Hay Bale
         this.pushMatrix();
         this.translate(5, 0.25, 5);
         this.hayBale.display();

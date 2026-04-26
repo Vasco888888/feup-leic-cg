@@ -1,4 +1,4 @@
-import { CGFobject, CGFappearance, CGFtexture } from '../../lib/CGF.js';
+import { CGFobject, CGFappearance, CGFtexture } from '../../../lib/CGF.js';
 
 /**
  * MyHayBale
@@ -10,10 +10,10 @@ export class MyHayBale extends CGFobject {
 
         // Hay Material
         this.hayMaterial = new CGFappearance(scene);
-        this.hayMaterial.setAmbient(0.4, 0.4, 0.2, 1.0);
-        this.hayMaterial.setDiffuse(0.8, 0.8, 0.4, 1.0);
+        this.hayMaterial.setAmbient(0.6, 0.6, 0.4, 1.0);
+        this.hayMaterial.setDiffuse(1.0, 1.0, 1.0, 1.0);
         this.hayMaterial.setSpecular(0.1, 0.1, 0.1, 1.0);
-        this.hayMaterial.setShininess(1.0);
+        this.hayMaterial.setShininess(5.0);
 
         this.hayTexture = new CGFtexture(scene, "textures/assets/hay-bale/hay_bale.jpg");
         this.hayMaterial.setTexture(this.hayTexture);
@@ -119,12 +119,19 @@ class MyHayBaleTwine extends CGFobject {
         this.indices = [];
         for(let i=0; i<6; i++) {
             let b = i * 4;
-            // Visible from outside
             this.indices.push(b, b + 1, b + 3, b, b + 3, b + 2);
-            // Visible from inside (double-sided fix)
             this.indices.push(b + 3, b + 1, b, b + 2, b + 3, b);
         }
-        this.normals = this.vertices;
+
+        this.normals = [
+            0,0,1, 0,0,1, 0,0,1, 0,0,1,
+            0,0,-1, 0,0,-1, 0,0,-1, 0,0,-1,
+            -1,0,0, -1,0,0, -1,0,0, -1,0,0,
+            1,0,0, 1,0,0, 1,0,0, 1,0,0,
+            0,1,0, 0,1,0, 0,1,0, 0,1,0,
+            0,-1,0, 0,-1,0, 0,-1,0, 0,-1,0
+        ];
+
         this.primitiveType = this.scene.gl.TRIANGLES;
         this.initGLBuffers();
     }
