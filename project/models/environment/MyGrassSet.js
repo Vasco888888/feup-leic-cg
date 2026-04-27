@@ -52,10 +52,18 @@ export class MyGrassSet {
         this.deadPlacements = this._generatePlacements(deadCount, true);
     }
 
+    /**
+     * Generates a deterministic pseudo-random number in [0, 1] from an integer index.
+     * Uses large prime numbers to mix the bits and avoid repeating patterns.
+     * Same seed + same index always gives the same result (reproducible).
+     */
     _seededRandom(index) {
+        // Combine index and seed using large primes to spread values apart
         let h = (index * 374761393 + this.seed * 668265263) | 0;
+        // XOR-shift: mix the high bits into the low bits for better distribution
         h = Math.imul(h ^ (h >>> 13), 1274126177);
         h = h ^ (h >>> 16);
+        // Convert to a float in [0, 1] by masking to positive and dividing
         return (h & 0x7fffffff) / 0x7fffffff;
     }
 
@@ -69,8 +77,29 @@ export class MyGrassSet {
             const dist = Math.sqrt(this._seededRandom(idx * 3 + 1)) * this.areaRadius * 0.85;
             const worldX = Math.cos(angle) * dist;
             const worldZ = Math.sin(angle) * dist;
-            const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
 
+            // Skip if on the dirt path (same curve used in terrain.frag)
+            const terrainSize = 520;
+            const TWO_PI = 6.2831;
+
+            // Convert world position to [0,1] UV coordinates
+            const u = worldX / terrainSize + 0.5;
+            const v = worldZ / terrainSize + 0.5;
+
+            // Path follows two sine waves: a wide curve + a smaller wobble
+            const mainCurveAmplitude = 0.18;
+            const mainCurveFrequency = 1.2;
+            const wobbleAmplitude = 0.08;
+            const wobbleFrequency = 2.7;
+
+            const pathCentreX = 0.5
+                + mainCurveAmplitude * Math.sin(v * TWO_PI * mainCurveFrequency + 0.8)
+                + wobbleAmplitude    * Math.sin(v * TWO_PI * wobbleFrequency + 2.1);
+
+            const pathHalfWidth = 0.035;
+            if (Math.abs(u - pathCentreX) < pathHalfWidth) continue;
+
+            const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
             const patchIdx = Math.floor(this._seededRandom(idx * 3 + 2) * this.patchPool.length);
 
             placements.push({
