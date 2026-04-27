@@ -90,13 +90,15 @@ export class MyScene extends CGFscene {
         this.terrainAppearance.setSpecular(0.05, 0.05, 0.05, 1.0);
         this.terrainAppearance.setShininess(8.0);
 
-        this.grassTexture = new CGFtexture(this, "textures/environment/terrain/grass.jpeg");
-        this.dirtTexture  = new CGFtexture(this, "textures/environment/terrain/dirt.png");
+        this.grassTexture  = new CGFtexture(this, "textures/environment/terrain/grass.jpeg");
+        this.dirtTexture   = new CGFtexture(this, "textures/environment/terrain/dirt.png");
+        this.flowerTexture = new CGFtexture(this, "textures/environment/terrain/flowers.png");
 
         this.terrainShader = new CGFshader(this.gl, "shaders/terrain.vert", "shaders/terrain.frag");
         this.terrainShader.setUniformsValues({
             uGrassTexture:  0,
             uDirtTexture:   1,
+            uFlowerTexture: 2,
             uTerrainSize:   520.0,
             uTerrainRadius: 255.0,
             uLightDir: this.sunDirection,
@@ -372,6 +374,7 @@ export class MyScene extends CGFscene {
         // Bind textures to the correct sampler units
         this.grassTexture.bind(0);
         this.dirtTexture.bind(1);
+        this.flowerTexture.bind(2);
 
         if (this.terrainWireframe) {
             this.terrain.setLineMode();
