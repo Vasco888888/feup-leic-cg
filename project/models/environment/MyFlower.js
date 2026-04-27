@@ -201,7 +201,9 @@ export class MyFlower extends CGFobject {
         scene.gl.enable(scene.gl.CULL_FACE);
 
         // ── Draw receptacle (centre) ──
+        scene.gl.disable(scene.gl.CULL_FACE);
         this.receptacleGeom.display();
+        scene.gl.enable(scene.gl.CULL_FACE);
 
         scene.popMatrix();
     }

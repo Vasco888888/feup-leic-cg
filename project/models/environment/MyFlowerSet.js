@@ -174,7 +174,9 @@ export class MyFlowerSet {
         this.centreAppearance.setAmbient(...shape.centreColor, 1);
         this.centreAppearance.setDiffuse(...shape.centreColor, 1);
         this.centreAppearance.apply();
+        scene.gl.disable(scene.gl.CULL_FACE);
         flower.receptacleGeom.display();
+        scene.gl.enable(scene.gl.CULL_FACE);
 
         scene.popMatrix();
     }
