@@ -188,6 +188,7 @@ export class MyFlower extends CGFobject {
         scene.rotate(-Math.PI / 8, 1, 0, 0);
 
         // ── Draw petals ──
+        scene.gl.disable(scene.gl.CULL_FACE);
         const angleStep = (2 * Math.PI) / this.petalCount;
         for (let i = 0; i < this.petalCount; i++) {
             scene.pushMatrix();
@@ -197,6 +198,7 @@ export class MyFlower extends CGFobject {
             this.petalGeom.display();
             scene.popMatrix();
         }
+        scene.gl.enable(scene.gl.CULL_FACE);
 
         // ── Draw receptacle (centre) ──
         this.receptacleGeom.display();

@@ -155,6 +155,7 @@ export class MyFlowerSet {
         scene.rotate(-Math.PI / 8, 1, 0, 0);
 
         // Petals
+        scene.gl.disable(scene.gl.CULL_FACE);
         this.petalAppearance.setAmbient(...shape.petalColor, 1);
         this.petalAppearance.setDiffuse(...shape.petalColor, 1);
         this.petalAppearance.apply();
@@ -167,6 +168,7 @@ export class MyFlowerSet {
             flower.petalGeom.display();
             scene.popMatrix();
         }
+        scene.gl.enable(scene.gl.CULL_FACE);
 
         // Centre
         this.centreAppearance.setAmbient(...shape.centreColor, 1);
