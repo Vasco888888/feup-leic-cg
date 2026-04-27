@@ -28,6 +28,7 @@ export class MyInterface extends CGFinterface {
         const lightFolder = this.gui.addFolder("Sun Lighting");
         lightFolder.add(this.scene, "sunLightEnabled").name("Directional Sun");
         lightFolder.add(this.scene, "spotLightEnabled").name("Spotlight");
+        lightFolder.add(this.scene, "pauseDayCycle").name("Pause Cycle");
 
         return true;
     }

@@ -36,6 +36,7 @@ export class MyScene extends CGFscene {
         this.dayTime = 0;
         this.sunInfluence = 1.0;
         this.moonInfluence = 0.0;
+        this.pauseDayCycle = false;
     }
 
     init(application) {
@@ -262,7 +263,9 @@ export class MyScene extends CGFscene {
     }
 
     update(t) {
-        this.dayTime = (t / 1000.0) * this.dayCycleSpeed;
+        if (!this.pauseDayCycle) {
+            this.dayTime = (t / 1000.0) * this.dayCycleSpeed;
+        }
         this.sunDirection = vec3.fromValues(
             Math.cos(this.dayTime),
             Math.sin(this.dayTime),
