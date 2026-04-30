@@ -26,7 +26,7 @@ export class MyGrassSet {
         this.grassShader.setUniformsValues({
             uTime: 0,
             uWindStrength: 0.6,
-            uGrassColor: [0.45, 0.65, 0.10],
+            uGrassColor: [0.28, 0.45, 0.12],
             uIsDead: 0,
             uSunInfluence: 1.0,
             uPatchPos: [0, 0, 0],
@@ -44,9 +44,11 @@ export class MyGrassSet {
         this.patchPool = [];
         const poolSize = 6;
         for (let i = 0; i < poolSize; i++) {
-            // Making patches significantly bigger and denser
-            const bladeCount = 300 + Math.floor(this._seededRandom(i * 2) * 400);
-            const radius = 10.0 + this._seededRandom(i * 2 + 1) * 15.0;
+            // Calculate radius first, then make blade count proportional to Area (pi * r^2)
+            // This guarantees every patch has the exact same visual density regardless of size.
+            const radius = 8.0 + this._seededRandom(i * 2 + 1) * 7.0;
+            const area = Math.PI * radius * radius;
+            const bladeCount = Math.floor(area * 3.5); // ~3.5 blades per square unit
             this.patchPool.push(new MyGrassPatch(scene, bladeCount, radius, seed + i * 37));
         }
 
@@ -115,10 +117,11 @@ export class MyGrassSet {
             const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
             const patchIdx = Math.floor(this._seededRandom(idx * 3 + 2) * this.patchPool.length);
 
-            // Irregular scaling and rotation to break the circular shape
+            // Irregular scaling and rotation to break the circular shape.
+            // We make scaleZ the inverse of scaleX so the overall Area (and therefore Density) remains perfectly constant!
             const rotY = this._seededRandom(idx * 3 + 3) * Math.PI * 2;
-            const scaleX = 0.6 + this._seededRandom(idx * 3 + 4) * 1.5; // Stretch randomly
-            const scaleZ = 0.6 + this._seededRandom(idx * 3 + 5) * 1.5;
+            const scaleX = 0.5 + this._seededRandom(idx * 3 + 4) * 1.5; // Stretch randomly between 0.5 and 2.0
+            const scaleZ = 1.0 / scaleX; // Squash the other axis to preserve area
 
             placements.push({
                 x: worldX, y: worldY, z: worldZ,
@@ -148,7 +151,7 @@ export class MyGrassSet {
             uTime: this.time || 0,
             uSunInfluence: this.sunInfluence !== undefined ? this.sunInfluence : 1.0,
             uWindStrength: 0.6,
-            uGrassColor: [0.45, 0.65, 0.10],
+            uGrassColor: [0.28, 0.45, 0.12],
             uIsDead: 0
         });
 
