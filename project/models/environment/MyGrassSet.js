@@ -25,8 +25,8 @@ export class MyGrassSet {
         );
         this.grassShader.setUniformsValues({
             uTime: 0,
-            uWindStrength: 0.15,
-            uGrassColor: [0.25, 0.55, 0.15],
+            uWindStrength: 0.6,
+            uGrassColor: [0.45, 0.65, 0.10],
             uIsDead: 0,
             uSunInfluence: 1.0
         });
@@ -42,7 +42,7 @@ export class MyGrassSet {
         this.patchPool = [];
         const poolSize = 6;
         for (let i = 0; i < poolSize; i++) {
-            const bladeCount = 30 + Math.floor(this._seededRandom(i * 2) * 30);
+            const bladeCount = 100 + Math.floor(this._seededRandom(i * 2) * 150);
             const radius = 2.0 + this._seededRandom(i * 2 + 1) * 3.0;
             this.patchPool.push(new MyGrassPatch(scene, bladeCount, radius, seed + i * 37));
         }
@@ -112,10 +112,8 @@ export class MyGrassSet {
     }
 
     update(t, sunInfluence = 1.0) {
-        this.grassShader.setUniformsValues({
-            uTime: t / 1000.0,
-            uSunInfluence: sunInfluence
-        });
+        this.time = (t / 1000.0) % 10000.0; // Modulo prevents GLSL float precision loss
+        this.sunInfluence = sunInfluence;
     }
 
     display() {
@@ -129,7 +127,10 @@ export class MyGrassSet {
 
         // ── Dense green patches ──
         this.grassShader.setUniformsValues({
-            uGrassColor: [0.25, 0.55, 0.15],
+            uTime: this.time || 0,
+            uSunInfluence: this.sunInfluence !== undefined ? this.sunInfluence : 1.0,
+            uWindStrength: 0.6,
+            uGrassColor: [0.45, 0.65, 0.10],
             uIsDead: 0
         });
 
@@ -142,6 +143,9 @@ export class MyGrassSet {
 
         // ── Dead/dry patches ──
         this.grassShader.setUniformsValues({
+            uTime: this.time || 0,
+            uSunInfluence: this.sunInfluence !== undefined ? this.sunInfluence : 1.0,
+            uWindStrength: 0.6,
             uGrassColor: [0.55, 0.50, 0.25],
             uIsDead: 1
         });

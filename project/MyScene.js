@@ -33,10 +33,10 @@ export class MyScene extends CGFscene {
         this.sunDirection = vec3.fromValues(-0.35, 0.72, 0.60);
         this.moonDirection = vec3.fromValues(0.35, -0.72, -0.60);
         this.dayCycleSpeed = 0.2;
-        this.dayTime = 0;
+        this.dayTime = Math.PI / 2.5;
         this.sunInfluence = 1.0;
         this.moonInfluence = 0.0;
-        this.pauseDayCycle = false;
+        this.pauseDayCycle = true;
     }
 
     init(application) {
@@ -431,8 +431,10 @@ export class MyScene extends CGFscene {
             this.popMatrix();
         }
 
+        // Display Wagon
         this.pushMatrix();
         this.translate(0, this.terrainYOffset, 0);
+        this.scale(2.0, 2.0, 2.0); // 2x scale as requested
         this.wagon.display();
         this.popMatrix();
 
