@@ -5,11 +5,12 @@ import { CGFobject } from "../../../lib/CGF.js";
  * A cylinder-based panorama that displays a mountain texture around the map.
  */
 export class MyMountainPanorama extends CGFobject {
-    constructor(scene, slices = 80, height = 50, radius = 250) {
+    constructor(scene, slices = 80, height = 50, radius = 250, uRepeat = 1) {
         super(scene);
         this.slices = slices;
         this.height = height;
         this.radius = radius;
+        this.uRepeat = uRepeat;
         this.initBuffers();
     }
 
@@ -28,13 +29,13 @@ export class MyMountainPanorama extends CGFobject {
 
             // Bottom vertex
             this.vertices.push(x * this.radius, 0, z * this.radius);
-            this.normals.push(-x, 0, -z); // Facing inward
-            this.texCoords.push(u * 15, 1);
+            this.normals.push(0, 1, 0); // Pointing up to catch sunlight
+            this.texCoords.push(u * this.uRepeat, 1);
 
             // Top vertex
             this.vertices.push(x * this.radius, this.height, z * this.radius);
-            this.normals.push(-x, 0, -z); // Facing inward
-            this.texCoords.push(u * 15, 0);
+            this.normals.push(0, 1, 0); // Pointing up to catch sunlight
+            this.texCoords.push(u * this.uRepeat, 0);
         }
 
         for (let i = 0; i < this.slices; i++) {
