@@ -64,7 +64,8 @@ export class MyScene extends CGFscene {
         this.terrain = new MyTerrain(this, 128, 520, 10, 42);
         this.rockSet = new MyRockSet(this, this.terrain, 30, 200, 123);
         this.flowerSet = new MyFlowerSet(this, this.terrain, 50, 190, 777);
-        this.grassSet = new MyGrassSet(this, this.terrain, 100, 30, 250, 456);
+        // Using many smaller patches (400 green, 100 wheat) so they hug the rolling hills perfectly
+        this.grassSet = new MyGrassSet(this, this.terrain, 400, 100, 250, 456);
         this.mountainPanorama = new MyMountainPanorama(this, 80, 80, 250, 30); // Nearer, denser
         this.mountainFarPanorama = new MyMountainPanorama(this, 80, 120, 255, 10); // Farther, taller, larger peaks
 

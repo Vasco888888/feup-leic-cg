@@ -23,6 +23,27 @@ export class MyGrassSet {
             "shaders/grass.vert",
             "shaders/grass.frag"
         );
+        // Collect obstacles (rocks and flowers) for shader culling
+        const obsData = [];
+        if (scene.rockSet) {
+            for(const p of scene.rockSet.placements) {
+                if (obsData.length >= 80 * 3) break;
+                // Rock radius based on scale
+                obsData.push(p.x, p.z, Math.max(p.scaleX, p.scaleZ) * 2.0); 
+            }
+        }
+        if (scene.flowerSet) {
+            for(const p of scene.flowerSet.placements) {
+                if (obsData.length >= 80 * 3) break;
+                // Flower radius based on scale
+                obsData.push(p.x, p.z, p.scale * 1.8); 
+            }
+        }
+        // Pad the rest of the array with zeros to satisfy the uniform array size
+        while (obsData.length < 80 * 3) {
+            obsData.push(0, 0, 0);
+        }
+
         this.grassShader.setUniformsValues({
             uTime: 0,
             uWindStrength: 0.6,
@@ -31,7 +52,8 @@ export class MyGrassSet {
             uSunInfluence: 1.0,
             uPatchPos: [0, 0, 0],
             uRotY: 0,
-            uScale: [1, 1]
+            uScale: [1, 1],
+            uObstacles: obsData
         });
 
         // Grass appearance (no texture needed — shader colours it)
@@ -44,9 +66,9 @@ export class MyGrassSet {
         this.patchPool = [];
         const poolSize = 6;
         for (let i = 0; i < poolSize; i++) {
-            // Calculate radius first, then make blade count proportional to Area (pi * r^2)
-            // This guarantees every patch has the exact same visual density regardless of size.
-            const radius = 8.0 + this._seededRandom(i * 2 + 1) * 7.0;
+            // Reduce radius drastically so each patch is small. This ensures flat patches 
+            // don't jut out over the procedurally generated rolling hills.
+            const radius = 3.0 + this._seededRandom(i * 2 + 1) * 3.0; // 3.0 to 6.0
             const area = Math.PI * radius * radius;
             const bladeCount = Math.floor(area * 3.5); // ~3.5 blades per square unit
             this.patchPool.push(new MyGrassPatch(scene, bladeCount, radius, seed + i * 37));
@@ -78,8 +100,10 @@ export class MyGrassSet {
         const maxAttempts = count * 100; // Increased significantly to find spots in restricted zones
         const offset = isDead ? 10000 : 0;
 
-        for (let i = 0; i < count; i++) {
-            const idx = i + offset;
+        while (placements.length < count && attempts < maxAttempts) {
+            const idx = attempts + offset;
+            attempts++;
+
             const angle = this._seededRandom(idx * 3) * Math.PI * 2;
             const dist = Math.sqrt(this._seededRandom(idx * 3 + 1)) * this.areaRadius * 0.85;
             const worldX = Math.cos(angle) * dist;
@@ -88,12 +112,9 @@ export class MyGrassSet {
             // Skip if on the dirt path (same curve used in terrain.frag)
             const terrainSize = 520;
             const TWO_PI = 6.2831;
-
-            // Convert world position to [0,1] UV coordinates
             const u = worldX / terrainSize + 0.5;
             const v = worldZ / terrainSize + 0.5;
 
-            // Path follows two sine waves: a wide curve + a smaller wobble
             const mainCurveAmplitude = 0.18;
             const mainCurveFrequency = 1.2;
             const wobbleAmplitude = 0.08;

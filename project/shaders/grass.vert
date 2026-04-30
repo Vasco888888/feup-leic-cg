@@ -36,17 +36,17 @@ void main() {
     // We use pow() to make the tip move more than the middle.
     float weight = pow(max(0.0, pos.y), 1.4);
 
-    // Wind displacement
-    // General sway (slow and broad) - even slower
-    float windPhase = uTime * 0.6 + (pos.x * 0.15 + pos.z * 0.15);
-    // Micro-flutter (fast and jittery) - even slower
-    float flutterPhase = uTime * 3.5 + (pos.x * 2.5 + pos.z * 2.5);
+    // Wind displacement (Using world position so overlapping patches sway perfectly in sync)
+    // General sway (slow and broad)
+    float windPhase = uTime * 0.6 + (vWorldPos.x * 0.15 + vWorldPos.z * 0.15);
+    // Micro-flutter (fast and jittery)
+    float flutterPhase = uTime * 3.5 + (vWorldPos.x * 2.5 + vWorldPos.z * 2.5);
     
     // Scale down the overall wind strength for less distance
-    float strength = uWindStrength * 0.6;
+    float strength = uWindStrength * 0.4;
 
     float sway = sin(windPhase) * strength;
-    float flutter = sin(flutterPhase) * (strength * 0.2);
+    float flutter = sin(flutterPhase) * (strength * 0.15);
     
     // Displacement logic
     pos.x += (sway + flutter) * weight;
