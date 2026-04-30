@@ -431,8 +431,10 @@ export class MyScene extends CGFscene {
             this.popMatrix();
         }
 
+        // Display Wagon
         this.pushMatrix();
         this.translate(0, this.terrainYOffset, 0);
+        this.scale(2.0, 2.0, 2.0); // 2x scale as requested
         this.wagon.display();
         this.popMatrix();
 
