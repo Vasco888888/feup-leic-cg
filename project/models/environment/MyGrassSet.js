@@ -38,12 +38,12 @@ export class MyGrassSet {
         this.grassAppearance.setSpecular(0.05, 0.05, 0.05, 1);
         this.grassAppearance.setShininess(5);
 
-        // Pre-generate a pool of patch geometries
         this.patchPool = [];
         const poolSize = 6;
         for (let i = 0; i < poolSize; i++) {
-            const bladeCount = 100 + Math.floor(this._seededRandom(i * 2) * 150);
-            const radius = 2.0 + this._seededRandom(i * 2 + 1) * 3.0;
+            // Making patches significantly bigger and denser
+            const bladeCount = 300 + Math.floor(this._seededRandom(i * 2) * 400);
+            const radius = 10.0 + this._seededRandom(i * 2 + 1) * 15.0;
             this.patchPool.push(new MyGrassPatch(scene, bladeCount, radius, seed + i * 37));
         }
 
