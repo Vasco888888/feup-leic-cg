@@ -72,6 +72,8 @@ export class MyGrassSet {
 
     _generatePlacements(count, isDead) {
         const placements = [];
+        let attempts = 0;
+        const maxAttempts = count * 100; // Increased significantly to find spots in restricted zones
         const offset = isDead ? 10000 : 0;
 
         for (let i = 0; i < count; i++) {
@@ -101,6 +103,14 @@ export class MyGrassSet {
 
             const pathHalfWidth = 0.035;
             if (Math.abs(u - pathCentreX) < pathHalfWidth) continue;
+
+            // Use a simple organic sine-wave pattern to create distinct 'zones' for wheat and green grass
+            const zone = Math.sin(worldX * 0.03) * Math.cos(worldZ * 0.03);
+            
+            // Wheat (isDead) only spawns in the positive peaks, Green only in the negative valleys
+            // We leave a gap between -0.2 and +0.4 so their massive patches don't touch at the borders
+            if (isDead && zone < 0.4) continue;
+            if (!isDead && zone > -0.2) continue;
 
             const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
             const patchIdx = Math.floor(this._seededRandom(idx * 3 + 2) * this.patchPool.length);
