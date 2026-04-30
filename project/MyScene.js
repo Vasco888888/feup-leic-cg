@@ -8,6 +8,7 @@ import { MyTerrain } from "./models/environment/MyTerrain.js";
 import { MyRockSet } from "./models/environment/MyRockSet.js";
 import { MyFlowerSet } from "./models/environment/MyFlowerSet.js";
 import { MyGrassSet } from "./models/environment/MyGrassSet.js";
+import { MyMountainPanorama } from "./models/environment/MyMountainPanorama.js";
 
 export class MyScene extends CGFscene {
     constructor() {
@@ -64,6 +65,8 @@ export class MyScene extends CGFscene {
         this.rockSet = new MyRockSet(this, this.terrain, 30, 200, 123);
         this.flowerSet = new MyFlowerSet(this, this.terrain, 50, 190, 777);
         this.grassSet = new MyGrassSet(this, this.terrain, 40, 15, 190, 456);
+        this.mountainPanorama = new MyMountainPanorama(this, 80, 80, 250, 30); // Nearer, denser
+        this.mountainFarPanorama = new MyMountainPanorama(this, 80, 120, 255, 10); // Farther, taller, larger peaks
 
         this.skyAppearance = new CGFappearance(this);
         this.skyAppearance.setAmbient(1.0, 1.0, 1.0, 1.0);
@@ -83,6 +86,24 @@ export class MyScene extends CGFscene {
         this.floorAppearance.setSpecular(0.04, 0.10, 0.04, 1.0);
         this.floorAppearance.setShininess(12.0);
 
+        this.mountainAppearance = new CGFappearance(this);
+        this.mountainAppearance.setAmbient(1, 1, 1, 1);
+        this.mountainAppearance.setDiffuse(1, 1, 1, 1);
+        this.mountainAppearance.setSpecular(0, 0, 0, 1);
+        this.mountainAppearance.setShininess(1.0);
+        this.mountainTexture = new CGFtexture(this, "textures/environment/sky/hills.png");
+        this.mountainAppearance.setTexture(this.mountainTexture);
+        this.mountainAppearance.setTextureWrap('REPEAT', 'CLAMP_TO_EDGE');
+
+        this.mountainFarAppearance = new CGFappearance(this);
+        this.mountainFarAppearance.setAmbient(0.5, 0.5, 0.6, 1); // Darker/Silhouetted far layer
+        this.mountainFarAppearance.setDiffuse(0.5, 0.5, 0.6, 1);
+        this.mountainFarAppearance.setSpecular(0, 0, 0, 1);
+        this.mountainFarAppearance.setShininess(1.0);
+        this.mountainFarTexture = new CGFtexture(this, "textures/environment/sky/mountains.png");
+        this.mountainFarAppearance.setTexture(this.mountainFarTexture);
+        this.mountainFarAppearance.setTextureWrap('REPEAT', 'CLAMP_TO_EDGE');
+
         // ── Terrain appearance & shader ──
         this.terrainAppearance = new CGFappearance(this);
         this.terrainAppearance.setAmbient(0.8, 0.8, 0.8, 1.0);
@@ -90,16 +111,16 @@ export class MyScene extends CGFscene {
         this.terrainAppearance.setSpecular(0.05, 0.05, 0.05, 1.0);
         this.terrainAppearance.setShininess(8.0);
 
-        this.grassTexture  = new CGFtexture(this, "textures/environment/terrain/grass.jpeg");
-        this.dirtTexture   = new CGFtexture(this, "textures/environment/terrain/dirt.png");
+        this.grassTexture = new CGFtexture(this, "textures/environment/terrain/grass.jpeg");
+        this.dirtTexture = new CGFtexture(this, "textures/environment/terrain/dirt.png");
         this.flowerTexture = new CGFtexture(this, "textures/environment/terrain/flowers.png");
 
         this.terrainShader = new CGFshader(this.gl, "shaders/terrain.vert", "shaders/terrain.frag");
         this.terrainShader.setUniformsValues({
-            uGrassTexture:  0,
-            uDirtTexture:   1,
+            uGrassTexture: 0,
+            uDirtTexture: 1,
             uFlowerTexture: 2,
-            uTerrainSize:   520.0,
+            uTerrainSize: 520.0,
             uTerrainRadius: 255.0,
             uLightDir: this.sunDirection,
             uAmbientStrength: 0.18,
@@ -280,8 +301,8 @@ export class MyScene extends CGFscene {
         );
 
         this.cloudOffset = ((t / 1000.0) * this.cloudSpeed) % 1000.0;
-        
-        this.skyShader.setUniformsValues({ 
+
+        this.skyShader.setUniformsValues({
             uSunDirection: this.sunDirection,
             uMoonDirection: this.moonDirection
         });
@@ -431,8 +452,12 @@ export class MyScene extends CGFscene {
             this.popMatrix();
         }
 
+        this.displayMountainPanorama();
+
+        // Display Wagon
         this.pushMatrix();
         this.translate(0, this.terrainYOffset, 0);
+        this.scale(2.0, 2.0, 2.0); // 2x scale
         this.wagon.display();
         this.popMatrix();
 
@@ -451,5 +476,32 @@ export class MyScene extends CGFscene {
         if (this.displayAxis) {
             this.axis.display();
         }
+    }
+
+    displayMountainPanorama() {
+        this.pushMatrix();
+
+        // Ensure it doesn't get affected by sky shader
+        this.setActiveShader(this.defaultShader);
+
+        this.gl.enable(this.gl.BLEND);
+        this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+
+        // 1. Far Layer (Back)
+        this.pushMatrix();
+        this.translate(0, this.terrainYOffset - 20, 0);
+        this.mountainFarAppearance.apply();
+        this.mountainFarPanorama.display();
+        this.popMatrix();
+
+        // 2. Near Layer (Front)
+        this.pushMatrix();
+        this.translate(0, this.terrainYOffset - 10, 0);
+        this.mountainAppearance.apply();
+        this.mountainPanorama.display();
+        this.popMatrix();
+
+        this.gl.disable(this.gl.BLEND);
+        this.popMatrix();
     }
 }

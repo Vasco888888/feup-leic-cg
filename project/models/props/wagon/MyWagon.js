@@ -1,10 +1,11 @@
-import { CGFobject } from '../../../../lib/CGF.js';
+import { CGFobject, CGFappearance, CGFtexture } from '../../../../lib/CGF.js';
 import { MyWheel } from './MyWheel.js';
 import { MyWagonBed } from './MyWagonBed.js';
 import { MyCover } from './MyCover.js';
 import { MyTongue } from './MyTongue.js';
 import { MySeat } from './MySeat.js';
 import { MyLamp } from './MyLamp.js';
+import { CGFobjModel } from '../../../../lib/extra/CGFobjModel.js';
 
 /**
  * MyWagon
@@ -18,6 +19,16 @@ export class MyWagon extends CGFobject {
         this.tongue = new MyTongue(scene);
         this.seat = new MySeat(scene);
         this.lamp = new MyLamp(scene);
+
+        this.horse = new CGFobjModel(scene, "models/external/horse.obj");
+        this.horseMaterial = new CGFappearance(scene);
+        this.horseMaterial.setAmbient(0.588, 0.588, 0.588, 1.0);
+        this.horseMaterial.setDiffuse(0.588, 0.588, 0.588, 1.0);
+        this.horseMaterial.setSpecular(0.0, 0.0, 0.0, 1.0);
+        this.horseMaterial.setShininess(10.0);
+
+        this.horseTexture = new CGFtexture(scene, "textures/props/wagon/horse/horse.jpg");
+        this.horseMaterial.setTexture(this.horseTexture);
     }
 
     display() {
@@ -91,6 +102,16 @@ export class MyWagon extends CGFobject {
         this.scene.pushMatrix();
         this.scene.translate(1.3, 1.1, -0.75);
         this.lamp.display();
+        this.scene.popMatrix();
+
+        // --- Horse ---
+        this.scene.pushMatrix();
+        this.scene.translate(3.1, 0.0, 0);
+        this.scene.scale(0.0013, 0.0013, 0.0013);
+        this.scene.rotate(Math.PI / 2, 0, 1, 0);
+        this.scene.rotate(Math.PI / 2, -1, 0, 0);
+        this.horseMaterial.apply();
+        this.horse.display();
         this.scene.popMatrix();
     }
 }
