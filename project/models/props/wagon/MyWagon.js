@@ -1,4 +1,4 @@
-import { CGFobject } from '../../../lib/CGF.js';
+import { CGFobject } from '../../../../lib/CGF.js';
 import { MyWheel } from './MyWheel.js';
 import { MyWagonBed } from './MyWagonBed.js';
 import { MyCover } from './MyCover.js';
