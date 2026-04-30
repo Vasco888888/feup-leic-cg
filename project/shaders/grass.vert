@@ -8,6 +8,8 @@ uniform mat4 uPMatrix;
 uniform float uTime;
 uniform float uWindStrength;
 uniform vec3 uPatchPos;
+uniform float uRotY;
+uniform vec2 uScale;
 
 varying vec2 vTextureCoord;
 varying float vHeight;
@@ -15,7 +17,18 @@ varying vec3 vWorldPos;
 
 void main() {
     vec3 pos = aVertexPosition;
-    vWorldPos = uPatchPos + pos;
+    
+    // Calculate true world position by applying local patch transforms in the correct order (Scale -> Rotate)
+    float cosR = cos(uRotY);
+    float sinR = sin(uRotY);
+    float sx = pos.x * uScale.x;
+    float sz = pos.z * uScale.y;
+    vec3 localPos = vec3(
+        sx * cosR + sz * sinR,
+        pos.y,
+        -sx * sinR + sz * cosR
+    );
+    vWorldPos = uPatchPos + localPos;
 
 
     // Use height (y) as the primary factor for wind displacement.

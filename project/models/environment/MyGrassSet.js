@@ -28,7 +28,10 @@ export class MyGrassSet {
             uWindStrength: 0.6,
             uGrassColor: [0.45, 0.65, 0.10],
             uIsDead: 0,
-            uSunInfluence: 1.0
+            uSunInfluence: 1.0,
+            uPatchPos: [0, 0, 0],
+            uRotY: 0,
+            uScale: [1, 1]
         });
 
         // Grass appearance (no texture needed — shader colours it)
@@ -144,6 +147,11 @@ export class MyGrassSet {
             scene.translate(p.x, p.y, p.z);
             scene.rotate(p.rotY, 0, 1, 0);
             scene.scale(p.scaleX, 1.0, p.scaleZ);
+            this.grassShader.setUniformsValues({ 
+                uPatchPos: [p.x, p.y, p.z],
+                uRotY: p.rotY,
+                uScale: [p.scaleX, p.scaleZ]
+            });
             this.patchPool[p.patchIdx].display();
             scene.popMatrix();
         }
@@ -162,6 +170,11 @@ export class MyGrassSet {
             scene.translate(p.x, p.y, p.z);
             scene.rotate(p.rotY, 0, 1, 0);
             scene.scale(p.scaleX, 1.0, p.scaleZ);
+            this.grassShader.setUniformsValues({ 
+                uPatchPos: [p.x, p.y, p.z],
+                uRotY: p.rotY,
+                uScale: [p.scaleX, p.scaleZ]
+            });
             this.patchPool[p.patchIdx].display();
             scene.popMatrix();
         }
