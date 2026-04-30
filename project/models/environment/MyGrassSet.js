@@ -102,9 +102,14 @@ export class MyGrassSet {
             const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
             const patchIdx = Math.floor(this._seededRandom(idx * 3 + 2) * this.patchPool.length);
 
+            // Irregular scaling and rotation to break the circular shape
+            const rotY = this._seededRandom(idx * 3 + 3) * Math.PI * 2;
+            const scaleX = 0.6 + this._seededRandom(idx * 3 + 4) * 1.5; // Stretch randomly
+            const scaleZ = 0.6 + this._seededRandom(idx * 3 + 5) * 1.5;
+
             placements.push({
                 x: worldX, y: worldY, z: worldZ,
-                patchIdx
+                patchIdx, rotY, scaleX, scaleZ
             });
         }
 
@@ -137,6 +142,8 @@ export class MyGrassSet {
         for (const p of this.densePlacements) {
             scene.pushMatrix();
             scene.translate(p.x, p.y, p.z);
+            scene.rotate(p.rotY, 0, 1, 0);
+            scene.scale(p.scaleX, 1.0, p.scaleZ);
             this.patchPool[p.patchIdx].display();
             scene.popMatrix();
         }
@@ -146,13 +153,15 @@ export class MyGrassSet {
             uTime: this.time || 0,
             uSunInfluence: this.sunInfluence !== undefined ? this.sunInfluence : 1.0,
             uWindStrength: 0.6,
-            uGrassColor: [0.55, 0.50, 0.25],
+            uGrassColor: [0.85, 0.75, 0.35], // Golden wheat color
             uIsDead: 1
         });
 
         for (const p of this.deadPlacements) {
             scene.pushMatrix();
             scene.translate(p.x, p.y, p.z);
+            scene.rotate(p.rotY, 0, 1, 0);
+            scene.scale(p.scaleX, 1.0, p.scaleZ);
             this.patchPool[p.patchIdx].display();
             scene.popMatrix();
         }
