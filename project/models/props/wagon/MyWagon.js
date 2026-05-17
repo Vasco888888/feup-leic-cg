@@ -7,7 +7,7 @@ import { MySeat } from './MySeat.js';
 import { MyLamp } from './MyLamp.js';
 import { CGFobjModel } from '../../../../lib/extra/CGFobjModel.js';
 
-const WAGON_SCALE = 2.0;
+const WAGON_SCALE = 1.5;
 const FRONT_WHEEL_OFFSET_X = 1.1;
 const REAR_WHEEL_OFFSET_X = -1.1;
 const WHEEL_OFFSET_Z = 1.1;
@@ -36,7 +36,7 @@ const HORSE_RADIUS = 1.8;
 const KINGPIN_WORLD_X = FRONT_WHEEL_OFFSET_X * WAGON_SCALE;
 const HORSE_FROM_KINGPIN = 2.0 * WAGON_SCALE;
 // stay clear of the terrain edge
-const WORLD_RADIUS = 240;
+const WORLD_RADIUS = 580;
 
 export class MyWagon extends CGFobject {
     constructor(scene) {
@@ -67,6 +67,10 @@ export class MyWagon extends CGFobject {
         // accumulated rolling angles (radians)
         this.frontSpin = 0;
         this.rearSpin = 0;
+
+        // pitch/roll set externally each frame from terrain sampling
+        this.pitch = 0;
+        this.roll = 0;
 
         // hay-bale carrying slots — holds references to scene bale entries
         this.carriedBales = [];
@@ -191,8 +195,9 @@ export class MyWagon extends CGFobject {
     }
 
     dropPosition() {
-        // drop just behind the wagon so it doesn't collide with the rear wheels
-        const dropLocalX = REAR_WHEEL_OFFSET_X * WAGON_SCALE - 1.5;
+        // far enough back to clear the wagon's rear collision circle plus the
+        // bale's, otherwise dropping shoves the wagon forward on the next frame
+        const dropLocalX = REAR_WHEEL_OFFSET_X * WAGON_SCALE - 4.0;
         const cos = Math.cos(this.heading);
         const sin = Math.sin(this.heading);
         return [
@@ -214,6 +219,9 @@ export class MyWagon extends CGFobject {
         // place and orient the whole rig in the world
         this.scene.translate(this.position[0], this.position[1], this.position[2]);
         this.scene.rotate(this.heading, 0, 1, 0);
+        // pitch nose up/down around the lateral axis, roll around the forward axis
+        this.scene.rotate(this.pitch, 0, 0, 1);
+        this.scene.rotate(this.roll, 1, 0, 0);
         this.scene.scale(WAGON_SCALE, WAGON_SCALE, WAGON_SCALE);
 
         // lift the bed so the wheels fit underneath
@@ -222,28 +230,28 @@ export class MyWagon extends CGFobject {
         this.bed.display();
         this.scene.popMatrix();
 
-        // front axle group: both wheels, the tongue, and the horse pivot together
-        // around a kingpin at the centre of the front axle (1.1, 0.5, 0).
+        // front wheels turn in place on their own vertical axis
+        this.scene.pushMatrix();
+        this.scene.translate(FRONT_WHEEL_OFFSET_X, FRONT_WHEEL_Y, WHEEL_OFFSET_Z);
+        this.scene.rotate(this.steering, 0, 1, 0);
+        this.scene.rotate(-this.frontSpin, 0, 0, 1);
+        this.wheel.display();
+        this.scene.popMatrix();
+
+        this.scene.pushMatrix();
+        this.scene.translate(FRONT_WHEEL_OFFSET_X, FRONT_WHEEL_Y, -WHEEL_OFFSET_Z);
+        this.scene.rotate(this.steering, 0, 1, 0);
+        this.scene.rotate(-this.frontSpin, 0, 0, 1);
+        this.wheel.display();
+        this.scene.popMatrix();
+
+        // tongue and horse still pivot together on the kingpin
         this.scene.pushMatrix();
         this.scene.translate(FRONT_WHEEL_OFFSET_X, FRONT_WHEEL_Y, 0);
         this.scene.rotate(this.steering, 0, 1, 0);
 
-        this.scene.pushMatrix();
-        this.scene.translate(0, 0, WHEEL_OFFSET_Z);
-        this.scene.rotate(-this.frontSpin, 0, 0, 1);
-        this.wheel.display();
-        this.scene.popMatrix();
-
-        this.scene.pushMatrix();
-        this.scene.translate(0, 0, -WHEEL_OFFSET_Z);
-        this.scene.rotate(-this.frontSpin, 0, 0, 1);
-        this.wheel.display();
-        this.scene.popMatrix();
-
-        // tongue's rear end sits at the kingpin and extends forward in local +X
         this.tongue.display();
 
-        // horse is harnessed to the tongue tip, so it swings with the same pivot
         this.scene.pushMatrix();
         this.scene.translate(2.0, -0.5, 0);
         this.scene.scale(0.0013, 0.0013, 0.0013);
@@ -253,7 +261,7 @@ export class MyWagon extends CGFobject {
         this.horse.display();
         this.scene.popMatrix();
 
-        this.scene.popMatrix(); // end front axle group
+        this.scene.popMatrix(); // end tongue/horse group
 
         // rear wheels — fixed orientation, larger radius
         this.scene.pushMatrix();
@@ -290,11 +298,16 @@ export class MyWagon extends CGFobject {
         this.lamp.display();
         this.scene.popMatrix();
 
-        // carried hay bales stack on the bed, oldest at the bottom
+        // carried bales lie flat at the back of the bed, long axis fore-aft
         if (this.scene.hayBale) {
-            for (let i = 0; i < this.carriedBales.length; i++) {
+            const baleSlots = [
+                [-0.7, 1.25,  0.5],
+                [-0.7, 1.25, -0.5]
+            ];
+            for (let i = 0; i < this.carriedBales.length && i < baleSlots.length; i++) {
+                const [bx, by, bz] = baleSlots[i];
                 this.scene.pushMatrix();
-                this.scene.translate(0, 1.4 + i * 0.55, 0);
+                this.scene.translate(bx, by, bz);
                 this.scene.hayBale.display();
                 this.scene.popMatrix();
             }
