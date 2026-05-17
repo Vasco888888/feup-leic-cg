@@ -43,9 +43,12 @@ export class MyScene extends CGFscene {
         // wagon physics needs a real dt between frames
         this.lastUpdateTime = null;
 
-        // hay bale state — ground position, carry flag, and key edge-trigger memory
-        this.balePos = [5, 0.9, 5];
-        this.baleHeld = false;
+        // hay bales scattered around the field; each tracks its own held state
+        this.bales = [
+            { pos: [5, 0.9, 5], held: false },
+            { pos: [14, 0.9, -8], held: false },
+            { pos: [-9, 0.9, 13], held: false }
+        ];
         // reach point sits ahead of the wagon centre (near the horse), with a
         // generous radius so the bale only needs to be in front of the rig
         this.pickupReachOffset = 5.0;
@@ -354,10 +357,12 @@ export class MyScene extends CGFscene {
         // barn footprint: 10x10 square, treated as a tight circle
         colliders.push({ x: this.barnPos.x, z: this.barnPos.z, radius: 6.5 });
 
-        // hay bale on the ground — soft so the horse can muzzle right up to it,
-        // but the wagon bed still bumps into it
-        if (!this.baleHeld) {
-            colliders.push({ x: this.balePos[0], z: this.balePos[2], radius: 1.5, soft: true });
+        // every grounded hay bale is a soft collider so the horse can muzzle
+        // up to it, but the wagon bed still bumps into it
+        for (const bale of this.bales) {
+            if (!bale.held) {
+                colliders.push({ x: bale.pos[0], z: bale.pos[2], radius: 1.5, soft: true });
+            }
         }
 
         return colliders;
@@ -368,28 +373,35 @@ export class MyScene extends CGFscene {
         const pickupKey = this.gui.isKeyPressed("KeyP");
         const dropKey = this.gui.isKeyPressed("KeyL");
 
-        // edge-trigger so one tap = one action
-        if (pickupKey && !this.prevPickupKey && !this.baleHeld) {
-            // pickup zone centred ahead of the wagon so the horse blocking the body
-            // doesn't make the bale unreachable
+        // pickup: find the nearest grounded bale inside the reach circle
+        if (pickupKey && !this.prevPickupKey && !this.wagon.isFull()) {
             const reachX = this.wagon.position[0] + this.pickupReachOffset * Math.cos(this.wagon.heading);
             const reachZ = this.wagon.position[2] - this.pickupReachOffset * Math.sin(this.wagon.heading);
-            const dx = reachX - this.balePos[0];
-            const dz = reachZ - this.balePos[2];
-            if (dx * dx + dz * dz <= this.balePickupRadius * this.balePickupRadius) {
-                if (this.wagon.pickup(this.hayBale)) {
-                    this.baleHeld = true;
+            const r2 = this.balePickupRadius * this.balePickupRadius;
+            let best = null;
+            let bestDist = Infinity;
+            for (const bale of this.bales) {
+                if (bale.held) continue;
+                const dx = reachX - bale.pos[0];
+                const dz = reachZ - bale.pos[2];
+                const d2 = dx * dx + dz * dz;
+                if (d2 <= r2 && d2 < bestDist) {
+                    best = bale;
+                    bestDist = d2;
                 }
             }
+            if (best) this.wagon.pickup(best);
         }
 
-        if (dropKey && !this.prevDropKey && this.baleHeld) {
+        // drop the most recently picked-up bale at the rear of the wagon
+        if (dropKey && !this.prevDropKey && this.wagon.carriedBales.length > 0) {
             const dropPos = this.wagon.dropPosition();
-            this.wagon.releaseBale();
-            this.balePos[0] = dropPos[0];
-            this.balePos[1] = 0.9; // resting height above terrainYOffset
-            this.balePos[2] = dropPos[2];
-            this.baleHeld = false;
+            const released = this.wagon.releaseBale();
+            if (released) {
+                released.pos[0] = dropPos[0];
+                released.pos[1] = 0.9;
+                released.pos[2] = dropPos[2];
+            }
         }
 
         this.prevPickupKey = pickupKey;
@@ -544,18 +556,18 @@ export class MyScene extends CGFscene {
         this.barn.display();
         this.popMatrix();
 
-        if (!this.baleHeld) {
-            // sit on the terrain instead of a flat plane
-            const groundY = this.terrain.getTerrainHeight(this.balePos[0], this.balePos[2]);
+        // draw every grounded bale and its pinpointing arrow
+        for (const bale of this.bales) {
+            if (bale.held) continue;
+            const groundY = this.terrain.getTerrainHeight(bale.pos[0], bale.pos[2]);
             this.pushMatrix();
-            this.translate(this.balePos[0], groundY + this.balePos[1], this.balePos[2]);
+            this.translate(bale.pos[0], groundY + bale.pos[1], bale.pos[2]);
             this.scale(2.0, 2.0, 2.0);
             this.hayBale.display();
             this.popMatrix();
 
-            // arrow shader handles spin and vertical bob from uTime
             this.pushMatrix();
-            this.translate(this.balePos[0], groundY + this.balePos[1] + 1.6, this.balePos[2]);
+            this.translate(bale.pos[0], groundY + bale.pos[1] + 1.6, bale.pos[2]);
             this.hayBaleArrow.display();
             this.popMatrix();
         }

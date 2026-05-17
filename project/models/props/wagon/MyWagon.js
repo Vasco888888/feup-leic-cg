@@ -68,8 +68,9 @@ export class MyWagon extends CGFobject {
         this.frontSpin = 0;
         this.rearSpin = 0;
 
-        // hay-bale carrying slot
-        this.carriedBale = null;
+        // hay-bale carrying slots — holds references to scene bale entries
+        this.carriedBales = [];
+        this.maxBales = 2;
     }
 
     update(dtSeconds, colliders = []) {
@@ -178,10 +179,15 @@ export class MyWagon extends CGFobject {
         this.rearSpin += dist / REAR_WHEEL_RADIUS_WORLD;
     }
 
-    pickup(bale) {
-        if (this.carriedBale) return false;
-        this.carriedBale = bale;
+    pickup(baleEntry) {
+        if (this.carriedBales.length >= this.maxBales) return false;
+        this.carriedBales.push(baleEntry);
+        baleEntry.held = true;
         return true;
+    }
+
+    isFull() {
+        return this.carriedBales.length >= this.maxBales;
     }
 
     dropPosition() {
@@ -197,9 +203,9 @@ export class MyWagon extends CGFobject {
     }
 
     releaseBale() {
-        const bale = this.carriedBale;
-        this.carriedBale = null;
-        return bale;
+        const baleEntry = this.carriedBales.pop();
+        if (baleEntry) baleEntry.held = false;
+        return baleEntry;
     }
 
     display() {
@@ -284,12 +290,14 @@ export class MyWagon extends CGFobject {
         this.lamp.display();
         this.scene.popMatrix();
 
-        // carried hay bale rides on top of the bed
-        if (this.carriedBale) {
-            this.scene.pushMatrix();
-            this.scene.translate(0, 1.4, 0);
-            this.carriedBale.display();
-            this.scene.popMatrix();
+        // carried hay bales stack on the bed, oldest at the bottom
+        if (this.scene.hayBale) {
+            for (let i = 0; i < this.carriedBales.length; i++) {
+                this.scene.pushMatrix();
+                this.scene.translate(0, 1.4 + i * 0.55, 0);
+                this.scene.hayBale.display();
+                this.scene.popMatrix();
+            }
         }
 
         this.scene.popMatrix();
