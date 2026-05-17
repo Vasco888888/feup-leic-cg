@@ -151,7 +151,12 @@ export class MyScene extends CGFscene {
             uTerrainRadius: 255.0,
             uLightDir: this.sunDirection,
             uAmbientStrength: 0.18,
-            uDiffuseStrength: 0.65
+            uDiffuseStrength: 0.65,
+            uLamp0Pos: [0, 0, 0],
+            uLamp1Pos: [0, 0, 0],
+            uLampColor: [1.0, 0.7, 0.2],
+            uLampRange: 16.0,
+            uLampStrength: 0.0
         });
 
         this.skyShader = new CGFshader(this.gl, "shaders/sky.vert", "shaders/sky.frag");
@@ -204,9 +209,9 @@ export class MyScene extends CGFscene {
             this.lights[2].setAmbient(0, 0, 0, 1);
             this.lights[2].setDiffuse(1.0, 0.7, 0.2, 1); // warm
             this.lights[2].setSpecular(1.0, 0.7, 0.2, 1);
-            this.lights[2].setConstantAttenuation(0.1);
-            this.lights[2].setLinearAttenuation(0.2);
-            this.lights[2].setQuadraticAttenuation(0.1);
+            this.lights[2].setConstantAttenuation(0.4);
+            this.lights[2].setLinearAttenuation(0.08);
+            this.lights[2].setQuadraticAttenuation(0.012);
             this.lights[2].disable();
             this.lights[2].update();
         }
@@ -306,6 +311,44 @@ export class MyScene extends CGFscene {
                 this.lights[2].disable();
                 if (this.lights.length > 3) this.lights[3].disable();
             }
+        }
+
+        this.updateLampPositions();
+    }
+
+    updateLampPositions() {
+        if (!this.wagon) return;
+
+        // lamp positions in the wagon's pre-scale local frame
+        const lampsLocal = [
+            [1.3, 1.1,  0.75],
+            [1.3, 1.1, -0.75]
+        ];
+
+        const cosH = Math.cos(this.wagon.heading);
+        const sinH = Math.sin(this.wagon.heading);
+        const scale = 2.0; // matches WAGON_SCALE inside MyWagon.display
+
+        const world = lampsLocal.map(([lx, ly, lz]) => [
+            this.wagon.position[0] + scale * (lx * cosH + lz * sinH),
+            this.wagon.position[1] + scale * ly,
+            this.wagon.position[2] + scale * (-lx * sinH + lz * cosH)
+        ]);
+
+        if (this.lights.length > 2) {
+            this.lights[2].setPosition(world[0][0], world[0][1], world[0][2], 1);
+        }
+        if (this.lights.length > 3) {
+            this.lights[3].setPosition(world[1][0], world[1][1], world[1][2], 1);
+        }
+
+        // terrain runs its own shader, so feed it the lamp world positions
+        if (this.terrainShader) {
+            this.terrainShader.setUniformsValues({
+                uLamp0Pos: world[0],
+                uLamp1Pos: world[1],
+                uLampStrength: this.moonInfluence > 0.5 ? 1.0 : 0.0
+            });
         }
     }
 

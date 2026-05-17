@@ -15,6 +15,13 @@ uniform vec3      uLightDir;
 uniform float     uAmbientStrength;
 uniform float     uDiffuseStrength;
 
+// wagon lamps; uLampStrength is zeroed during the day
+uniform vec3  uLamp0Pos;
+uniform vec3  uLamp1Pos;
+uniform vec3  uLampColor;
+uniform float uLampRange;
+uniform float uLampStrength;
+
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
 }
@@ -102,5 +109,15 @@ void main() {
     float diffuse = max(dot(normalize(vNormal), normalize(uLightDir)), 0.0);
     float light = ambient + diffuse * uDiffuseStrength;
 
-    gl_FragColor = vec4(groundColor.rgb * light, 1.0);
+    vec3 lit = groundColor.rgb * light;
+
+    // squared distance falloff for each lamp
+    float d0 = length(uLamp0Pos - vWorldPos);
+    float d1 = length(uLamp1Pos - vWorldPos);
+    float att0 = clamp(1.0 - d0 / uLampRange, 0.0, 1.0);
+    float att1 = clamp(1.0 - d1 / uLampRange, 0.0, 1.0);
+    float lampLight = (att0 * att0 + att1 * att1) * uLampStrength;
+    lit += uLampColor * groundColor.rgb * lampLight;
+
+    gl_FragColor = vec4(lit, 1.0);
 }
