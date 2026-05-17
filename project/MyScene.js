@@ -162,7 +162,9 @@ export class MyScene extends CGFscene {
             uAOBarn:  [0, 0, 1, 0],
             uAOBale0: [0, 0, 1, 0],
             uAOBale1: [0, 0, 1, 0],
-            uAOBale2: [0, 0, 1, 0]
+            uAOBale2: [0, 0, 1, 0],
+            uCloudOffset: 0.0,
+            uCloudShadow: 0.35
         });
 
         this.skyShader = new CGFshader(this.gl, "shaders/sky.vert", "shaders/sky.frag");
@@ -439,6 +441,7 @@ export class MyScene extends CGFscene {
         }
 
         this.terrainShader.setUniformsValues({
+            uCloudOffset: this.cloudOffset,
             uAOWagon: aoWagon,
             uAOBarn: aoBarn,
             uAOBale0: baleSlots[0],

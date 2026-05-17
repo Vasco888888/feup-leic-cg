@@ -30,6 +30,10 @@ uniform vec4 uAOBale0;
 uniform vec4 uAOBale1;
 uniform vec4 uAOBale2;
 
+// drifting cloud cover dims the ground in patches
+uniform float uCloudOffset;
+uniform float uCloudShadow;
+
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
 }
@@ -129,6 +133,11 @@ void main() {
     float ambient = uAmbientStrength;
     float diffuse = max(dot(normalize(vNormal), normalize(uLightDir)), 0.0);
     float light = ambient + diffuse * uDiffuseStrength;
+
+    // cheap single-octave cloud shadow that drifts with the cloud cover
+    vec2 cloudUV = vWorldPos.xz * 0.0035 + vec2(uCloudOffset * 4.0, uCloudOffset * 1.4);
+    float cloudMask = smoothstep(0.45, 0.78, noise(cloudUV));
+    light *= 1.0 - cloudMask * uCloudShadow;
 
     vec3 lit = groundColor.rgb * light;
 
