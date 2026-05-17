@@ -62,10 +62,15 @@ export class MyHayBaleArrow extends CGFobject {
 
     display() {
         const gl = this.scene.gl;
-        const tSec = (this.scene.currentTime || 0) / 1000.0;
+        // modulo keeps the float precise even after the app has run for a while
+        const tSec = ((this.scene.currentTime || performance.now()) / 1000.0) % 10000.0;
 
         this.scene.setActiveShader(this.shader);
-        this.shader.setUniformsValues({ uTime: tSec });
+        this.shader.setUniformsValues({
+            uTime: tSec,
+            uTipColor:  [1.0, 0.95, 0.45],
+            uBaseColor: [1.0, 0.55, 0.10]
+        });
 
         // visible from any angle
         gl.disable(gl.CULL_FACE);
