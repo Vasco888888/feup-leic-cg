@@ -15,7 +15,6 @@ export class MyScene extends CGFscene {
     constructor() {
         super();
 
-        this.displayAxis = true;
         this.showSky = true;
         this.showClouds = true;
         this.showTerrain = true;
@@ -54,13 +53,19 @@ export class MyScene extends CGFscene {
         // arrows only float above bales the wagon is close to, so finding them feels earned
         this.baleArrowRange = 55.0;
 
-        // fixed-angle follow camera (world-space offsets, no heading rotation)
+        // 45-degree side view: offsetX gives the side angle, Y and Z roughly equal
         this.cameraFollow = true;
-        this.cameraOffsetX = 9.0;
-        this.cameraOffsetY = 15.0;
+        this.cameraOffsetX = 16.0;
+        this.cameraOffsetY = 8.0;
         this.cameraOffsetZ = 18.0;
-        this.cameraTargetUp = 2.0;
+        this.cameraTargetUp = 4.0;
         this.cameraSmoothTau = 0.4;
+        // separate tau so the rotational lag feels heavier than the translational follow
+        this.cameraHeadingTau = 0.9;
+        // smoothed heading the camera orbits around; matches wagon at rest
+        this.cameraHeading = 0;
+        // mouse Y position (no drag) raises/lowers the target so the camera tilts up/down
+        this.cameraPitchOffset = 0;
     }
 
     init(application) {
@@ -77,7 +82,6 @@ export class MyScene extends CGFscene {
 
         this.enableTextures(true);
 
-        this.axis = new CGFaxis(this, 8, 0.1);
         this.skyDome = new MySkyDome(this, 80, 28);
         this.floor = new MyPlane(this, 20);
         this.wagon = new MyWagon(this);
@@ -191,10 +195,11 @@ export class MyScene extends CGFscene {
     }
 
     initCameras() {
-        // seed at the rest offset so we don't whip in on the first frame
-        const startEye = vec3.fromValues(this.cameraOffsetX, this.cameraOffsetY, this.cameraOffsetZ);
+        // seed at the rest offset (wagon at origin, facing +X) so the camera
+        // starts behind the wagon and doesn't whip in on the first frame
+        const startEye = vec3.fromValues(-this.cameraOffsetZ, this.cameraOffsetY, this.cameraOffsetX);
         const startTarget = vec3.fromValues(0, this.cameraTargetUp, 0);
-        this.camera = new CGFcamera(0.65, 0.1, 1000, startEye, startTarget);
+        this.camera = new CGFcamera(0.6, 0.1, 1000, startEye, startTarget);
     }
 
     initLights() {
@@ -534,12 +539,29 @@ export class MyScene extends CGFscene {
     updateChaseCamera(dt) {
         const w = this.wagon;
 
-        const desiredEyeX = w.position[0] + this.cameraOffsetX;
-        const desiredEyeY = w.position[1] + this.cameraOffsetY;
-        const desiredEyeZ = w.position[2] + this.cameraOffsetZ;
+        // chase the wagon's heading on a slower timescale so the camera
+        // visibly trails behind when the wagon turns
+        const kHead = 1.0 - Math.exp(-dt / this.cameraHeadingTau);
+        let dh = w.heading - this.cameraHeading;
+        // shortest-path wrap so we don't take the long way around the circle
+        while (dh > Math.PI) dh -= 2 * Math.PI;
+        while (dh < -Math.PI) dh += 2 * Math.PI;
+        this.cameraHeading += dh * kHead;
 
+        // offsets are wagon-local: X is rightward, Y is up, Z is backward
+        const cosH = Math.cos(this.cameraHeading);
+        const sinH = Math.sin(this.cameraHeading);
+
+        const side = this.cameraOffsetX;
+        const back = this.cameraOffsetZ;
+
+        const desiredEyeX = w.position[0] + side * sinH - back * cosH;
+        const desiredEyeY = w.position[1] + this.cameraOffsetY;
+        const desiredEyeZ = w.position[2] + side * cosH + back * sinH;
+
+        // mouse-driven pitch raises/lowers the target so the camera tilts up to the sky
         const desiredTgtX = w.position[0];
-        const desiredTgtY = w.position[1] + this.cameraTargetUp;
+        const desiredTgtY = w.position[1] + this.cameraTargetUp + this.cameraPitchOffset;
         const desiredTgtZ = w.position[2];
 
         // frame-rate independent exponential smoothing
@@ -796,10 +818,6 @@ export class MyScene extends CGFscene {
             this.popMatrix();
         }
         this.hayBaleArrow.endBatch();
-
-        if (this.displayAxis) {
-            this.axis.display();
-        }
     }
 
     displayMountainPanorama() {
