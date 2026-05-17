@@ -222,28 +222,28 @@ export class MyWagon extends CGFobject {
         this.bed.display();
         this.scene.popMatrix();
 
-        // front axle group: both wheels, the tongue, and the horse pivot together
-        // around a kingpin at the centre of the front axle (1.1, 0.5, 0).
+        // front wheels turn in place on their own vertical axis
+        this.scene.pushMatrix();
+        this.scene.translate(FRONT_WHEEL_OFFSET_X, FRONT_WHEEL_Y, WHEEL_OFFSET_Z);
+        this.scene.rotate(this.steering, 0, 1, 0);
+        this.scene.rotate(-this.frontSpin, 0, 0, 1);
+        this.wheel.display();
+        this.scene.popMatrix();
+
+        this.scene.pushMatrix();
+        this.scene.translate(FRONT_WHEEL_OFFSET_X, FRONT_WHEEL_Y, -WHEEL_OFFSET_Z);
+        this.scene.rotate(this.steering, 0, 1, 0);
+        this.scene.rotate(-this.frontSpin, 0, 0, 1);
+        this.wheel.display();
+        this.scene.popMatrix();
+
+        // tongue and horse still pivot together on the kingpin
         this.scene.pushMatrix();
         this.scene.translate(FRONT_WHEEL_OFFSET_X, FRONT_WHEEL_Y, 0);
         this.scene.rotate(this.steering, 0, 1, 0);
 
-        this.scene.pushMatrix();
-        this.scene.translate(0, 0, WHEEL_OFFSET_Z);
-        this.scene.rotate(-this.frontSpin, 0, 0, 1);
-        this.wheel.display();
-        this.scene.popMatrix();
-
-        this.scene.pushMatrix();
-        this.scene.translate(0, 0, -WHEEL_OFFSET_Z);
-        this.scene.rotate(-this.frontSpin, 0, 0, 1);
-        this.wheel.display();
-        this.scene.popMatrix();
-
-        // tongue's rear end sits at the kingpin and extends forward in local +X
         this.tongue.display();
 
-        // horse is harnessed to the tongue tip, so it swings with the same pivot
         this.scene.pushMatrix();
         this.scene.translate(2.0, -0.5, 0);
         this.scene.scale(0.0013, 0.0013, 0.0013);
@@ -253,7 +253,7 @@ export class MyWagon extends CGFobject {
         this.horse.display();
         this.scene.popMatrix();
 
-        this.scene.popMatrix(); // end front axle group
+        this.scene.popMatrix(); // end tongue/horse group
 
         // rear wheels — fixed orientation, larger radius
         this.scene.pushMatrix();
