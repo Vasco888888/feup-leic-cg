@@ -336,6 +336,11 @@ export class MyScene extends CGFscene {
 
         if (this.wagon && dt > 0) {
             this.wagon.update(dt, this.getColliders());
+            // wheels need to ride on the terrain, not the abstract plane at Y=0
+            this.wagon.position[1] = this.terrain.getTerrainHeight(
+                this.wagon.position[0],
+                this.wagon.position[2]
+            );
             this.handleHayBaleKeys();
         }
     }
@@ -536,8 +541,10 @@ export class MyScene extends CGFscene {
         this.popMatrix();
 
         if (!this.baleHeld) {
+            // sit on the terrain instead of a flat plane
+            const groundY = this.terrain.getTerrainHeight(this.balePos[0], this.balePos[2]);
             this.pushMatrix();
-            this.translate(this.balePos[0], this.terrainYOffset + this.balePos[1], this.balePos[2]);
+            this.translate(this.balePos[0], groundY + this.balePos[1], this.balePos[2]);
             this.scale(2.0, 2.0, 2.0);
             this.hayBale.display();
             this.popMatrix();
