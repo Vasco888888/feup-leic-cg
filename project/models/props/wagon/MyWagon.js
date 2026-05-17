@@ -290,11 +290,16 @@ export class MyWagon extends CGFobject {
         this.lamp.display();
         this.scene.popMatrix();
 
-        // carried hay bales stack on the bed, oldest at the bottom
+        // carried bales lie flat at the back of the bed, long axis fore-aft
         if (this.scene.hayBale) {
-            for (let i = 0; i < this.carriedBales.length; i++) {
+            const baleSlots = [
+                [-0.7, 1.25,  0.5],
+                [-0.7, 1.25, -0.5]
+            ];
+            for (let i = 0; i < this.carriedBales.length && i < baleSlots.length; i++) {
+                const [bx, by, bz] = baleSlots[i];
                 this.scene.pushMatrix();
-                this.scene.translate(0, 1.4 + i * 0.55, 0);
+                this.scene.translate(bx, by, bz);
                 this.scene.hayBale.display();
                 this.scene.popMatrix();
             }
