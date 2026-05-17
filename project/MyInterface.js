@@ -30,6 +30,13 @@ export class MyInterface extends CGFinterface {
         lightFolder.add(this.scene, "spotLightEnabled").name("Spotlight");
         lightFolder.add(this.scene, "pauseDayCycle").name("Pause Cycle");
 
+        const cameraFolder = this.gui.addFolder("Camera");
+        cameraFolder.add(this.scene, "cameraFollow").name("Follow Wagon");
+        cameraFolder.add(this.scene, "cameraOffsetX", -30, 30).name("Offset X");
+        cameraFolder.add(this.scene, "cameraOffsetY", 4, 30).name("Height");
+        cameraFolder.add(this.scene, "cameraOffsetZ", -30, 30).name("Offset Z");
+        cameraFolder.add(this.scene, "cameraSmoothTau", 0.05, 1.5).name("Smoothing");
+
         this.initKeys();
 
         return true;
@@ -54,4 +61,11 @@ export class MyInterface extends CGFinterface {
     isKeyPressed(keyCode) {
         return this.activeKeys[keyCode] || false;
     }
+
+    // no mouse-driven camera control
+    processMouseDown(event) {}
+    processMouseMove(event) {}
+    processMouseUp(event) {}
+    processClick(event) {}
+    processWheel(event) {}
 }

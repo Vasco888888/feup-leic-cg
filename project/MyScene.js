@@ -55,6 +55,14 @@ export class MyScene extends CGFscene {
         this.balePickupRadius = 4.5;
         this.prevPickupKey = false;
         this.prevDropKey = false;
+
+        // fixed-angle follow camera (world-space offsets, no heading rotation)
+        this.cameraFollow = true;
+        this.cameraOffsetX = 9.0;
+        this.cameraOffsetY = 15.0;
+        this.cameraOffsetZ = 18.0;
+        this.cameraTargetUp = 2.0;
+        this.cameraSmoothTau = 0.4;
     }
 
     init(application) {
@@ -161,13 +169,10 @@ export class MyScene extends CGFscene {
     }
 
     initCameras() {
-        this.camera = new CGFcamera(
-            0.4,
-            0.1,
-            1000,
-            vec3.fromValues(35, 25, 35),
-            vec3.fromValues(0, 8, 0)
-        );
+        // seed at the rest offset so we don't whip in on the first frame
+        const startEye = vec3.fromValues(this.cameraOffsetX, this.cameraOffsetY, this.cameraOffsetZ);
+        const startTarget = vec3.fromValues(0, this.cameraTargetUp, 0);
+        this.camera = new CGFcamera(0.65, 0.1, 1000, startEye, startTarget);
     }
 
     initLights() {
@@ -348,7 +353,33 @@ export class MyScene extends CGFscene {
                 this.wagon.position[2]
             );
             this.handleHayBaleKeys();
+            if (this.cameraFollow) this.updateChaseCamera(dt);
         }
+    }
+
+    updateChaseCamera(dt) {
+        const w = this.wagon;
+
+        const desiredEyeX = w.position[0] + this.cameraOffsetX;
+        const desiredEyeY = w.position[1] + this.cameraOffsetY;
+        const desiredEyeZ = w.position[2] + this.cameraOffsetZ;
+
+        const desiredTgtX = w.position[0];
+        const desiredTgtY = w.position[1] + this.cameraTargetUp;
+        const desiredTgtZ = w.position[2];
+
+        // frame-rate independent exponential smoothing
+        const k = 1.0 - Math.exp(-dt / this.cameraSmoothTau);
+
+        const eye = this.camera.position;
+        eye[0] += (desiredEyeX - eye[0]) * k;
+        eye[1] += (desiredEyeY - eye[1]) * k;
+        eye[2] += (desiredEyeZ - eye[2]) * k;
+
+        const tgt = this.camera.target;
+        tgt[0] += (desiredTgtX - tgt[0]) * k;
+        tgt[1] += (desiredTgtY - tgt[1]) * k;
+        tgt[2] += (desiredTgtZ - tgt[2]) * k;
     }
 
     getColliders() {
