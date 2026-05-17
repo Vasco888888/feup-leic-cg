@@ -50,15 +50,28 @@ float fbm(vec2 p) {
     return value;
 }
 
-// wagon path mask
+// wagon path mask: union of several winding roads so the dirt branches
 float pathMask(vec2 worldXZ) {
     vec2 uv = worldXZ / uTerrainSize + 0.5;
 
-    float pathCentreX = 0.5 + 0.18 * sin(uv.y * 6.2831 * 1.2 + 0.8)
-                             + 0.08 * sin(uv.y * 6.2831 * 2.7 + 2.1);
+    // main winding road running roughly north-south
+    float c1 = 0.5 + 0.18 * sin(uv.y * 6.2831 * 1.2 + 0.8)
+                   + 0.08 * sin(uv.y * 6.2831 * 2.7 + 2.1);
+    float d1 = abs(uv.x - c1);
 
-    float dist = abs(uv.x - pathCentreX);
-    float pathWidth = 0.025;
+    // east-west crossroad weaving across the field
+    float c2 = 0.5 + 0.16 * sin(uv.x * 6.2831 * 1.0 + 1.6)
+                   + 0.07 * sin(uv.x * 6.2831 * 2.4 + 4.3);
+    float d2 = abs(uv.y - c2);
+
+    // short spur curling off the main road in the lower half
+    float c3 = 0.32 + 0.12 * sin(uv.y * 6.2831 * 1.6 + 2.4);
+    float spurGate = smoothstep(0.28, 0.40, uv.y) * (1.0 - smoothstep(0.62, 0.78, uv.y));
+    float d3 = mix(1.0, abs(uv.x - c3), spurGate);
+
+    float dist = min(min(d1, d2), d3);
+
+    float pathWidth = 0.022;
     float pathEdge  = 0.012;
 
     return smoothstep(pathWidth - pathEdge, pathWidth + pathEdge, dist);
@@ -79,17 +92,12 @@ void main() {
     vec4 dirtColor   = texture2D(uDirtTexture,   tiledUV);
     vec4 flowerColor = texture2D(uFlowerTexture,  tiledUV);
 
-    vec2 patchCoords = vWorldPos.xz * 0.008;
-    float patchNoise = fbm(patchCoords);
-    float dirtPatchMask = smoothstep(0.58, 0.72, patchNoise);
-
     float slope = 1.0 - dot(normalize(vNormal), vec3(0.0, 1.0, 0.0));
     float slopeDirt = smoothstep(0.25, 0.55, slope);
 
-    float dirtFactor = max(dirtPatchMask * 0.7, slopeDirt);
-
+    // dirt only shows on the wagon path and on truly steep slopes
     float pathGrass = pathMask(vWorldPos.xz);
-    dirtFactor = max(dirtFactor, 1.0 - pathGrass);
+    float dirtFactor = max(slopeDirt, 1.0 - pathGrass);
 
     // two fbm layers at different scales produce cluster spots
     float flowerNoise = fbm(vWorldPos.xz * 0.05 + vec2(7.3, 2.1));

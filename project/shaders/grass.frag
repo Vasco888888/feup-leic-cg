@@ -25,18 +25,29 @@ float fbm(vec2 p) {
     for (int i = 0; i < 5; i++) { v += a * noise(p); p *= 2.0; a *= 0.5; }
     return v;
 }
+// keep this in sync with terrain.frag's pathMask
 float pathMask(vec2 worldXZ) {
     vec2 uv = worldXZ / 520.0 + 0.5;
-    float pathX = 0.5 + 0.18 * sin(uv.y * 6.2831 * 1.2 + 0.8) + 0.08 * sin(uv.y * 6.2831 * 2.7 + 2.1);
-    return smoothstep(0.013, 0.037, abs(uv.x - pathX));
+
+    float c1 = 0.5 + 0.18 * sin(uv.y * 6.2831 * 1.2 + 0.8)
+                   + 0.08 * sin(uv.y * 6.2831 * 2.7 + 2.1);
+    float d1 = abs(uv.x - c1);
+
+    float c2 = 0.5 + 0.16 * sin(uv.x * 6.2831 * 1.0 + 1.6)
+                   + 0.07 * sin(uv.x * 6.2831 * 2.4 + 4.3);
+    float d2 = abs(uv.y - c2);
+
+    float c3 = 0.32 + 0.12 * sin(uv.y * 6.2831 * 1.6 + 2.4);
+    float spurGate = smoothstep(0.28, 0.40, uv.y) * (1.0 - smoothstep(0.62, 0.78, uv.y));
+    float d3 = mix(1.0, abs(uv.x - c3), spurGate);
+
+    float dist = min(min(d1, d2), d3);
+    return smoothstep(0.010, 0.034, dist);
 }
 
 void main() {
-    // skip fragments where terrain renders path or dirt
+    // skip fragments where terrain renders the wagon path
     if (pathMask(vWorldPos.xz) < 0.5) discard;
-
-    float dirtNoise = fbm(vWorldPos.xz * 0.008);
-    if (smoothstep(0.58, 0.72, dirtNoise) > 0.1) discard;
 
     vec3 baseColor = uGrassColor * 0.5;
     vec3 tipColor  = uGrassColor * 1.3;

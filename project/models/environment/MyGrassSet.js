@@ -89,23 +89,30 @@ export class MyGrassSet {
             const worldX = Math.cos(angle) * dist;
             const worldZ = Math.sin(angle) * dist;
 
-            // mirror the dirt path curve from terrain.frag so grass avoids it
+            // mirror the dirt path mask from terrain.frag so grass keeps off the roads
             const terrainSize = 520;
             const TWO_PI = 6.2831;
             const u = worldX / terrainSize + 0.5;
             const v = worldZ / terrainSize + 0.5;
 
-            const mainCurveAmplitude = 0.18;
-            const mainCurveFrequency = 1.2;
-            const wobbleAmplitude = 0.08;
-            const wobbleFrequency = 2.7;
+            const c1 = 0.5
+                + 0.18 * Math.sin(v * TWO_PI * 1.2 + 0.8)
+                + 0.08 * Math.sin(v * TWO_PI * 2.7 + 2.1);
+            const d1 = Math.abs(u - c1);
 
-            const pathCentreX = 0.5
-                + mainCurveAmplitude * Math.sin(v * TWO_PI * mainCurveFrequency + 0.8)
-                + wobbleAmplitude    * Math.sin(v * TWO_PI * wobbleFrequency + 2.1);
+            const c2 = 0.5
+                + 0.16 * Math.sin(u * TWO_PI * 1.0 + 1.6)
+                + 0.07 * Math.sin(u * TWO_PI * 2.4 + 4.3);
+            const d2 = Math.abs(v - c2);
 
-            const pathHalfWidth = 0.035;
-            if (Math.abs(u - pathCentreX) < pathHalfWidth) continue;
+            const c3 = 0.32 + 0.12 * Math.sin(v * TWO_PI * 1.6 + 2.4);
+            let spurGate = 0.0;
+            if (v > 0.28) spurGate = Math.min(1.0, (v - 0.28) / 0.12);
+            if (v > 0.62) spurGate *= Math.max(0.0, 1.0 - (v - 0.62) / 0.16);
+            const d3 = spurGate > 0.0 ? Math.abs(u - c3) : 1.0;
+
+            const pathHalfWidth = 0.034;
+            if (Math.min(d1, Math.min(d2, d3)) < pathHalfWidth) continue;
 
             // wheat lives in zone peaks, green in valleys; gap between -0.2 and 0.4 keeps them apart
             const zone = Math.sin(worldX * 0.03) * Math.cos(worldZ * 0.03);
