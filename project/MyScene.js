@@ -43,12 +43,8 @@ export class MyScene extends CGFscene {
         // wagon physics needs a real dt between frames
         this.lastUpdateTime = null;
 
-        // hay bales scattered around the field; each tracks its own held state
-        this.bales = [
-            { pos: [5, 0.9, 5], held: false },
-            { pos: [14, 0.9, -8], held: false },
-            { pos: [-9, 0.9, 13], held: false }
-        ];
+        // hay bales scattered around the field; populated in init() once barn is placed
+        this.bales = [];
         // reach point sits ahead of the wagon centre (near the horse), with a
         // generous radius so the bale only needs to be in front of the rig
         this.pickupReachOffset = 5.0;
@@ -88,6 +84,7 @@ export class MyScene extends CGFscene {
         this.barn = new MyBarn(this);
         this.barnPos = { x: -20, z: -20 };
         this.terrain = new MyTerrain(this, 96, 1200, 12, 42);
+        this.bales = this._generateBales(22, 2024);
         this.rockSet = new MyRockSet(this, this.terrain, 95, 520, 123);
         this.flowerSet = new MyFlowerSet(this, this.terrain, 150, 500, 777);
         // many small patches so they hug the rolling hills
@@ -421,6 +418,53 @@ export class MyScene extends CGFscene {
         this.updateTerrainEnvironment();
     }
 
+    _generateBales(count, seed) {
+        const bales = [];
+        const TWO_PI = Math.PI * 2;
+        const terrainSize = 1200;
+        const maxDist = 220;
+        const minDist = 18;
+
+        const hash = (n) => {
+            let h = ((n + seed * 919) * 374761393) | 0;
+            h = (h ^ (h >>> 13)) * 1274126177;
+            return ((h ^ (h >>> 16)) >>> 0) / 0xffffffff;
+        };
+
+        let attempts = 0;
+        while (bales.length < count && attempts < count * 60) {
+            const i = attempts;
+            attempts++;
+            const angle = hash(i * 3) * TWO_PI;
+            const dist = minDist + Math.sqrt(hash(i * 3 + 1)) * (maxDist - minDist);
+            const x = Math.cos(angle) * dist;
+            const z = Math.sin(angle) * dist;
+
+            // keep bales off the dirt roads
+            const u = x / terrainSize + 0.5;
+            const v = z / terrainSize + 0.5;
+            const c1 = 0.5
+                + 0.18 * Math.sin(v * TWO_PI * 1.2 + 0.8)
+                + 0.08 * Math.sin(v * TWO_PI * 2.7 + 2.1);
+            const c2 = 0.5
+                + 0.16 * Math.sin(u * TWO_PI * 1.0 + 1.6)
+                + 0.07 * Math.sin(u * TWO_PI * 2.4 + 4.3);
+            if (Math.abs(u - c1) < 0.045) continue;
+            if (Math.abs(v - c2) < 0.045) continue;
+
+            // keep clear of the barn and the wagon spawn
+            const dxBarn = x - this.barnPos.x;
+            const dzBarn = z - this.barnPos.z;
+            if (dxBarn * dxBarn + dzBarn * dzBarn < 90) continue;
+
+            // small no-spawn ring around origin where the wagon starts
+            if (x * x + z * z < 80) continue;
+
+            bales.push({ pos: [x, 0, z], held: false });
+        }
+        return bales;
+    }
+
     applyWagonTerrainTilt(dt) {
         const w = this.wagon;
         const cosH = Math.cos(w.heading);
@@ -558,7 +602,7 @@ export class MyScene extends CGFscene {
             const released = this.wagon.releaseBale();
             if (released) {
                 released.pos[0] = dropPos[0];
-                released.pos[1] = 0.9;
+                released.pos[1] = 0;
                 released.pos[2] = dropPos[2];
             }
         }
@@ -720,13 +764,15 @@ export class MyScene extends CGFscene {
             if (bale.held) continue;
             const groundY = this.terrain.getTerrainHeight(bale.pos[0], bale.pos[2]);
             this.pushMatrix();
-            this.translate(bale.pos[0], groundY + bale.pos[1], bale.pos[2]);
+            // bale geometry is centred (half-y 0.25 * scale 1.5 = 0.375), so lift
+            // by that amount to sit the base flush with the terrain
+            this.translate(bale.pos[0], groundY + 0.375, bale.pos[2]);
             this.scale(1.5, 1.5, 1.5);
             this.hayBale.display();
             this.popMatrix();
 
             this.pushMatrix();
-            this.translate(bale.pos[0], groundY + bale.pos[1] + 1.6, bale.pos[2]);
+            this.translate(bale.pos[0], groundY + 0.75 + 1.4, bale.pos[2]);
             this.hayBaleArrow.display();
             this.popMatrix();
         }
