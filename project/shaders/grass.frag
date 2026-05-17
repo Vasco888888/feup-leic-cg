@@ -42,12 +42,13 @@ void main() {
     if (smoothstep(0.58, 0.72, dirtNoise) > 0.1) discard;
 
     // Gradient: darker at base, lighter at tip
-    vec3 baseColor = uGrassColor * 0.6;
+    vec3 baseColor = uGrassColor * 0.5;
     vec3 tipColor  = uGrassColor * 1.3;
 
     // vHeight is the actual Y coordinate (approx 0.0 to 1.8)
-    // We clamp and scale it slightly to keep the color gradient looking natural
-    float colorFactor = clamp(vHeight / 1.5, 0.0, 1.0);
+    float heightNorm = clamp(vHeight / 1.5, 0.0, 1.0);
+    // Slight bias so the lower portion of the blade stays a touch darker
+    float colorFactor = pow(heightNorm, 1.2);
     vec3 bladeColor = mix(baseColor, tipColor, colorFactor);
 
 
