@@ -133,7 +133,17 @@ export class MyFlowerSet {
     }
 
     display() {
+        // skip flowers far from the camera; they aren't readable past a few dozen units anyway
+        const cam = this.scene.camera;
+        const camX = cam ? cam.position[0] : 0;
+        const camZ = cam ? cam.position[2] : 0;
+        const cullDistSq = 80 * 80;
+
         for (const p of this.placements) {
+            const dx = p.x - camX;
+            const dz = p.z - camZ;
+            if (dx * dx + dz * dz > cullDistSq) continue;
+
             const shape = this.flowerShapes[p.shapeIdx];
 
             this.scene.pushMatrix();

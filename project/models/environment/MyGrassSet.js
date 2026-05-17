@@ -17,23 +17,8 @@ export class MyGrassSet {
             "shaders/grass.frag"
         );
 
+        // grass freely overlaps rocks and flowers, it just sprouts everywhere
         this.obstacles = [];
-        if (scene.rockSet) {
-            for (const r of scene.rockSet.placements) {
-                this.obstacles.push({
-                    x: r.x, z: r.z,
-                    r: Math.max(r.scaleX, r.scaleZ) * 1.2 + 1.0
-                });
-            }
-        }
-        if (scene.flowerSet) {
-            for (const f of scene.flowerSet.placements) {
-                this.obstacles.push({
-                    x: f.x, z: f.z,
-                    r: f.scale * 0.5 + 0.6
-                });
-            }
-        }
 
         this.grassShader.setUniformsValues({
             uTime: 0,
@@ -57,9 +42,9 @@ export class MyGrassSet {
         const poolSize = 6;
         for (let i = 0; i < poolSize; i++) {
             // keep patches small so they hug rolling hills
-            const radius = 3.0 + this._seededRandom(i * 2 + 1) * 3.0;
+            const radius = 2.6 + this._seededRandom(i * 2 + 1) * 2.4;
             const area = Math.PI * radius * radius;
-            const bladeCount = Math.floor(area * 3.5);
+            const bladeCount = Math.floor(area * 7.0);
             this.patchPool.push(new MyGrassPatch(scene, bladeCount, radius, seed + i * 37));
         }
 
@@ -89,31 +74,35 @@ export class MyGrassSet {
             const worldX = Math.cos(angle) * dist;
             const worldZ = Math.sin(angle) * dist;
 
-            // mirror the dirt path curve from terrain.frag so grass avoids it
-            const terrainSize = 520;
+            // mirror the dirt path mask from terrain.frag so grass keeps off the roads
+            const terrainSize = 1200;
             const TWO_PI = 6.2831;
             const u = worldX / terrainSize + 0.5;
             const v = worldZ / terrainSize + 0.5;
 
-            const mainCurveAmplitude = 0.18;
-            const mainCurveFrequency = 1.2;
-            const wobbleAmplitude = 0.08;
-            const wobbleFrequency = 2.7;
+            const c1 = 0.5
+                + 0.18 * Math.sin(v * TWO_PI * 1.2 + 0.8)
+                + 0.08 * Math.sin(v * TWO_PI * 2.7 + 2.1);
+            const d1 = Math.abs(u - c1);
 
-            const pathCentreX = 0.5
-                + mainCurveAmplitude * Math.sin(v * TWO_PI * mainCurveFrequency + 0.8)
-                + wobbleAmplitude    * Math.sin(v * TWO_PI * wobbleFrequency + 2.1);
+            const c2 = 0.5
+                + 0.16 * Math.sin(u * TWO_PI * 1.0 + 1.6)
+                + 0.07 * Math.sin(u * TWO_PI * 2.4 + 4.3);
+            const d2 = Math.abs(v - c2);
 
-            const pathHalfWidth = 0.035;
-            if (Math.abs(u - pathCentreX) < pathHalfWidth) continue;
+            const c3 = 0.32 + 0.12 * Math.sin(v * TWO_PI * 1.6 + 2.4);
+            let spurGate = 0.0;
+            if (v > 0.28) spurGate = Math.min(1.0, (v - 0.28) / 0.12);
+            if (v > 0.62) spurGate *= Math.max(0.0, 1.0 - (v - 0.62) / 0.16);
+            const d3 = spurGate > 0.0 ? Math.abs(u - c3) : 1.0;
 
-            // wheat lives in zone peaks, green in valleys; gap between -0.2 and 0.4 keeps them apart
+            const pathHalfWidth = 0.034;
+            if (Math.min(d1, Math.min(d2, d3)) < pathHalfWidth) continue;
+
+            // split the field into green/wheat zones with a thin buffer between them
             const zone = Math.sin(worldX * 0.03) * Math.cos(worldZ * 0.03);
-
-            if (isDead && zone < 0.4) continue;
-            if (!isDead && zone > -0.2) continue;
-
-            if (this._collidesWithObstacles(worldX, worldZ)) continue;
+            if (isDead && zone < 0.55) continue;
+            if (!isDead && zone > 0.45) continue;
 
             const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
             const patchIdx = Math.floor(this._seededRandom(idx * 3 + 2) * this.patchPool.length);
@@ -164,7 +153,30 @@ export class MyGrassSet {
             uIsDead: 0
         });
 
+        // render grass in front of the camera up to a long distance, skip everything
+        // behind us; gives the field depth without paying for unseen patches
+        const cam = scene.camera;
+        const camX = cam ? cam.position[0] : 0;
+        const camZ = cam ? cam.position[2] : 0;
+        let fX = 0;
+        let fZ = -1;
+        if (cam) {
+            fX = cam.target[0] - cam.position[0];
+            fZ = cam.target[2] - cam.position[2];
+            const fLen = Math.hypot(fX, fZ);
+            if (fLen > 1e-3) { fX /= fLen; fZ /= fLen; }
+        }
+        const renderDist = 95;
+        const renderDistSq = renderDist * renderDist;
+        // slight tolerance so patches just behind the camera (peripheral vision) still show
+        const behindThreshold = -0.2;
+
         for (const p of this.densePlacements) {
+            const dx = p.x - camX;
+            const dz = p.z - camZ;
+            const distSq = dx * dx + dz * dz;
+            if (distSq > renderDistSq) continue;
+            if (distSq > 25 && (dx * fX + dz * fZ) / Math.sqrt(distSq) < behindThreshold) continue;
             scene.pushMatrix();
             scene.translate(p.x, p.y, p.z);
             scene.rotate(p.rotY, 0, 1, 0);
@@ -187,6 +199,11 @@ export class MyGrassSet {
         });
 
         for (const p of this.deadPlacements) {
+            const dx = p.x - camX;
+            const dz = p.z - camZ;
+            const distSq = dx * dx + dz * dz;
+            if (distSq > renderDistSq) continue;
+            if (distSq > 25 && (dx * fX + dz * fZ) / Math.sqrt(distSq) < behindThreshold) continue;
             scene.pushMatrix();
             scene.translate(p.x, p.y, p.z);
             scene.rotate(p.rotY, 0, 1, 0);

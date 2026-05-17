@@ -60,23 +60,35 @@ export class MyHayBaleArrow extends CGFobject {
         this.initGLBuffers();
     }
 
+    // legacy single-arrow path (kept for completeness; scene prefers the batched API)
     display() {
         const gl = this.scene.gl;
-        // modulo keeps the float precise even after the app has run for a while
-        const tSec = ((this.scene.currentTime || performance.now()) / 1000.0) % 10000.0;
+        this.beginBatch();
+        gl.disable(gl.CULL_FACE);
+        super.display();
+        gl.enable(gl.CULL_FACE);
+        this.endBatch();
+    }
 
+    // bind shader + uniforms + disable culling once for a series of arrows
+    beginBatch() {
+        const tSec = ((this.scene.currentTime || performance.now()) / 1000.0) % 10000.0;
         this.scene.setActiveShader(this.shader);
         this.shader.setUniformsValues({
             uTime: tSec,
             uTipColor:  [1.0, 0.95, 0.45],
             uBaseColor: [1.0, 0.55, 0.10]
         });
+        this.scene.gl.disable(this.scene.gl.CULL_FACE);
+    }
 
-        // visible from any angle
-        gl.disable(gl.CULL_FACE);
+    // draw one arrow instance assuming beginBatch() already set the state
+    drawInstance() {
         super.display();
-        gl.enable(gl.CULL_FACE);
+    }
 
+    endBatch() {
+        this.scene.gl.enable(this.scene.gl.CULL_FACE);
         this.scene.setActiveShader(this.scene.defaultShader);
     }
 }

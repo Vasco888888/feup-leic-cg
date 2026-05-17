@@ -15,7 +15,6 @@ export class MyScene extends CGFscene {
     constructor() {
         super();
 
-        this.displayAxis = true;
         this.showSky = true;
         this.showClouds = true;
         this.showTerrain = true;
@@ -29,7 +28,7 @@ export class MyScene extends CGFscene {
 
         this.cloudSpeed = 0.01;
         this.cloudOffset = 0.0;
-        this.skyRadius = 260.0;
+        this.skyRadius = 760.0;
         this.terrainYOffset = 0.0;
 
         this.sunDirection = vec3.fromValues(-0.35, 0.72, 0.60);
@@ -43,18 +42,30 @@ export class MyScene extends CGFscene {
         // wagon physics needs a real dt between frames
         this.lastUpdateTime = null;
 
-        // hay bales scattered around the field; each tracks its own held state
-        this.bales = [
-            { pos: [5, 0.9, 5], held: false },
-            { pos: [14, 0.9, -8], held: false },
-            { pos: [-9, 0.9, 13], held: false }
-        ];
+        // hay bales scattered around the field; populated in init() once barn is placed
+        this.bales = [];
         // reach point sits ahead of the wagon centre (near the horse), with a
         // generous radius so the bale only needs to be in front of the rig
         this.pickupReachOffset = 5.0;
         this.balePickupRadius = 4.5;
         this.prevPickupKey = false;
         this.prevDropKey = false;
+        // arrows only float above bales the wagon is close to, so finding them feels earned
+        this.baleArrowRange = 55.0;
+
+        // 45-degree side view: offsetX gives the side angle, Y and Z roughly equal
+        this.cameraFollow = true;
+        this.cameraOffsetX = 16.0;
+        this.cameraOffsetY = 8.0;
+        this.cameraOffsetZ = 18.0;
+        this.cameraTargetUp = 4.0;
+        this.cameraSmoothTau = 0.4;
+        // separate tau so the rotational lag feels heavier than the translational follow
+        this.cameraHeadingTau = 0.9;
+        // smoothed heading the camera orbits around; matches wagon at rest
+        this.cameraHeading = 0;
+        // mouse Y position (no drag) raises/lowers the target so the camera tilts up/down
+        this.cameraPitchOffset = 0;
     }
 
     init(application) {
@@ -71,7 +82,6 @@ export class MyScene extends CGFscene {
 
         this.enableTextures(true);
 
-        this.axis = new CGFaxis(this, 8, 0.1);
         this.skyDome = new MySkyDome(this, 80, 28);
         this.floor = new MyPlane(this, 20);
         this.wagon = new MyWagon(this);
@@ -79,13 +89,15 @@ export class MyScene extends CGFscene {
         this.hayBaleArrow = new MyHayBaleArrow(this);
         this.barn = new MyBarn(this);
         this.barnPos = { x: -20, z: -20 };
-        this.terrain = new MyTerrain(this, 128, 520, 10, 42);
-        this.rockSet = new MyRockSet(this, this.terrain, 30, 200, 123);
-        this.flowerSet = new MyFlowerSet(this, this.terrain, 50, 190, 777);
+        this.terrain = new MyTerrain(this, 96, 1200, 12, 42);
+        this.bales = this._generateBales(22, 2024);
+        this.rockSet = new MyRockSet(this, this.terrain, 95, 520, 123);
+        this.flowerSet = new MyFlowerSet(this, this.terrain, 150, 500, 777);
         // many small patches so they hug the rolling hills
-        this.grassSet = new MyGrassSet(this, this.terrain, 400, 100, 250, 456);
-        this.mountainPanorama = new MyMountainPanorama(this, 80, 80, 250, 30);
-        this.mountainFarPanorama = new MyMountainPanorama(this, 80, 120, 255, 10);
+        this.grassSet = new MyGrassSet(this, this.terrain, 3500, 480, 580, 456);
+        // panoramas sit just outside the terrain disc so the rim never occludes their foothills
+        this.mountainPanorama = new MyMountainPanorama(this, 96, 85, 615, 60);
+        this.mountainFarPanorama = new MyMountainPanorama(this, 96, 190, 720, 22);
 
         this.skyAppearance = new CGFappearance(this);
         this.skyAppearance.setAmbient(1.0, 1.0, 1.0, 1.0);
@@ -139,11 +151,23 @@ export class MyScene extends CGFscene {
             uGrassTexture: 0,
             uDirtTexture: 1,
             uFlowerTexture: 2,
-            uTerrainSize: 520.0,
-            uTerrainRadius: 255.0,
+            uTerrainSize: 1200.0,
+            uTerrainRadius: 595.0,
             uLightDir: this.sunDirection,
             uAmbientStrength: 0.18,
-            uDiffuseStrength: 0.65
+            uDiffuseStrength: 0.65,
+            uLamp0Pos: [0, 0, 0],
+            uLamp1Pos: [0, 0, 0],
+            uLampColor: [1.0, 0.7, 0.2],
+            uLampRange: 16.0,
+            uLampStrength: 0.0,
+            uAOWagon: [0, 0, 1, 0],
+            uAOBarn:  [0, 0, 1, 0],
+            uAOBale0: [0, 0, 1, 0],
+            uAOBale1: [0, 0, 1, 0],
+            uAOBale2: [0, 0, 1, 0],
+            uCloudOffset: 0.0,
+            uCloudShadow: 0.35
         });
 
         this.skyShader = new CGFshader(this.gl, "shaders/sky.vert", "shaders/sky.frag");
@@ -157,17 +181,25 @@ export class MyScene extends CGFscene {
         this.cloudShader = new CGFshader(this.gl, "shaders/clouds.vert", "shaders/clouds.frag");
         this.cloudShader.setUniformsValues({ uCloudOffset: 0.0 });
 
+        this.mountainShader = new CGFshader(this.gl, "shaders/mountain.vert", "shaders/mountain.frag");
+        this.mountainShader.setUniformsValues({
+            uTexture: 0,
+            uTint: [1.0, 1.0, 1.0],
+            uFogColor: [0.78, 0.85, 0.92],
+            uFogStrength: 0.0,
+            uPanoramaHeight: 1.0,
+            uSunInfluence: 1.0
+        });
+
         this.setUpdatePeriod(50);
     }
 
     initCameras() {
-        this.camera = new CGFcamera(
-            0.4,
-            0.1,
-            1000,
-            vec3.fromValues(35, 25, 35),
-            vec3.fromValues(0, 8, 0)
-        );
+        // seed at the rest offset (wagon at origin, facing +X) so the camera
+        // starts behind the wagon and doesn't whip in on the first frame
+        const startEye = vec3.fromValues(-this.cameraOffsetZ, this.cameraOffsetY, this.cameraOffsetX);
+        const startTarget = vec3.fromValues(0, this.cameraTargetUp, 0);
+        this.camera = new CGFcamera(0.6, 0.1, 1000, startEye, startTarget);
     }
 
     initLights() {
@@ -199,9 +231,9 @@ export class MyScene extends CGFscene {
             this.lights[2].setAmbient(0, 0, 0, 1);
             this.lights[2].setDiffuse(1.0, 0.7, 0.2, 1); // warm
             this.lights[2].setSpecular(1.0, 0.7, 0.2, 1);
-            this.lights[2].setConstantAttenuation(0.1);
-            this.lights[2].setLinearAttenuation(0.2);
-            this.lights[2].setQuadraticAttenuation(0.1);
+            this.lights[2].setConstantAttenuation(0.4);
+            this.lights[2].setLinearAttenuation(0.08);
+            this.lights[2].setQuadraticAttenuation(0.012);
             this.lights[2].disable();
             this.lights[2].update();
         }
@@ -302,6 +334,44 @@ export class MyScene extends CGFscene {
                 if (this.lights.length > 3) this.lights[3].disable();
             }
         }
+
+        this.updateLampPositions();
+    }
+
+    updateLampPositions() {
+        if (!this.wagon) return;
+
+        // lamp positions in the wagon's pre-scale local frame
+        const lampsLocal = [
+            [1.3, 1.1,  0.75],
+            [1.3, 1.1, -0.75]
+        ];
+
+        const cosH = Math.cos(this.wagon.heading);
+        const sinH = Math.sin(this.wagon.heading);
+        const scale = 1.5; // matches WAGON_SCALE inside MyWagon.display
+
+        const world = lampsLocal.map(([lx, ly, lz]) => [
+            this.wagon.position[0] + scale * (lx * cosH + lz * sinH),
+            this.wagon.position[1] + scale * ly,
+            this.wagon.position[2] + scale * (-lx * sinH + lz * cosH)
+        ]);
+
+        if (this.lights.length > 2) {
+            this.lights[2].setPosition(world[0][0], world[0][1], world[0][2], 1);
+        }
+        if (this.lights.length > 3) {
+            this.lights[3].setPosition(world[1][0], world[1][1], world[1][2], 1);
+        }
+
+        // terrain runs its own shader, so feed it the lamp world positions
+        if (this.terrainShader) {
+            this.terrainShader.setUniformsValues({
+                uLamp0Pos: world[0],
+                uLamp1Pos: world[1],
+                uLampStrength: this.moonInfluence > 0.5 ? 1.0 : 0.0
+            });
+        }
     }
 
     update(t) {
@@ -347,8 +417,165 @@ export class MyScene extends CGFscene {
                 this.wagon.position[0],
                 this.wagon.position[2]
             );
+            this.applyWagonTerrainTilt(dt);
             this.handleHayBaleKeys();
+            if (this.cameraFollow) this.updateChaseCamera(dt);
         }
+
+        this.updateTerrainEnvironment();
+    }
+
+    _generateBales(count, seed) {
+        const bales = [];
+        const TWO_PI = Math.PI * 2;
+        const terrainSize = 1200;
+        const maxDist = 220;
+        const minDist = 18;
+
+        const hash = (n) => {
+            let h = ((n + seed * 919) * 374761393) | 0;
+            h = (h ^ (h >>> 13)) * 1274126177;
+            return ((h ^ (h >>> 16)) >>> 0) / 0xffffffff;
+        };
+
+        let attempts = 0;
+        while (bales.length < count && attempts < count * 60) {
+            const i = attempts;
+            attempts++;
+            const angle = hash(i * 3) * TWO_PI;
+            const dist = minDist + Math.sqrt(hash(i * 3 + 1)) * (maxDist - minDist);
+            const x = Math.cos(angle) * dist;
+            const z = Math.sin(angle) * dist;
+
+            // keep bales off the dirt roads
+            const u = x / terrainSize + 0.5;
+            const v = z / terrainSize + 0.5;
+            const c1 = 0.5
+                + 0.18 * Math.sin(v * TWO_PI * 1.2 + 0.8)
+                + 0.08 * Math.sin(v * TWO_PI * 2.7 + 2.1);
+            const c2 = 0.5
+                + 0.16 * Math.sin(u * TWO_PI * 1.0 + 1.6)
+                + 0.07 * Math.sin(u * TWO_PI * 2.4 + 4.3);
+            if (Math.abs(u - c1) < 0.045) continue;
+            if (Math.abs(v - c2) < 0.045) continue;
+
+            // keep clear of the barn and the wagon spawn
+            const dxBarn = x - this.barnPos.x;
+            const dzBarn = z - this.barnPos.z;
+            if (dxBarn * dxBarn + dzBarn * dzBarn < 90) continue;
+
+            // small no-spawn ring around origin where the wagon starts
+            if (x * x + z * z < 80) continue;
+
+            bales.push({ pos: [x, 0, z], held: false });
+        }
+        return bales;
+    }
+
+    applyWagonTerrainTilt(dt) {
+        const w = this.wagon;
+        const cosH = Math.cos(w.heading);
+        const sinH = Math.sin(w.heading);
+
+        // wheelbase/track in world units; mirrors MyWagon's wheel offsets
+        const halfWheelbase = 1.1 * 1.5;
+        const halfTrack     = 1.1 * 1.5;
+
+        const fx = w.position[0] + halfWheelbase * cosH;
+        const fz = w.position[2] - halfWheelbase * sinH;
+        const rx = w.position[0] - halfWheelbase * cosH;
+        const rz = w.position[2] + halfWheelbase * sinH;
+
+        const leftX  = w.position[0] - halfTrack * sinH;
+        const leftZ  = w.position[2] - halfTrack * cosH;
+        const rightX = w.position[0] + halfTrack * sinH;
+        const rightZ = w.position[2] + halfTrack * cosH;
+
+        const hf = this.terrain.getTerrainHeight(fx, fz);
+        const hr = this.terrain.getTerrainHeight(rx, rz);
+        const hl = this.terrain.getTerrainHeight(leftX, leftZ);
+        const hri = this.terrain.getTerrainHeight(rightX, rightZ);
+
+        const targetPitch = Math.atan2(hf - hr, halfWheelbase * 2.0);
+        // right-side-higher rolls the body LEFT (away from the rise), so flip sign
+        const targetRoll  = Math.atan2(hl - hri, halfTrack * 2.0);
+
+        // smooth so quick bumps don't make the body shake
+        const k = 1.0 - Math.exp(-dt / 0.12);
+        w.pitch += (targetPitch - w.pitch) * k;
+        w.roll  += (targetRoll  - w.roll)  * k;
+    }
+
+    updateTerrainEnvironment() {
+        if (!this.terrainShader) return;
+
+        const aoOff = [0, 0, 1, 0];
+        const aoFor = (pos, radius, strength) => [pos[0], pos[2], radius, strength];
+
+        const aoWagon = this.wagon
+            ? aoFor(this.wagon.position, 4.2, 0.55)
+            : aoOff;
+        const aoBarn = this.barnPos
+            ? [this.barnPos.x, this.barnPos.z, 5.5, 0.6]
+            : aoOff;
+
+        const baleSlots = [aoOff, aoOff, aoOff];
+        let slot = 0;
+        for (const bale of this.bales) {
+            if (bale.held || slot >= 3) continue;
+            baleSlots[slot++] = [bale.pos[0], bale.pos[2], 1.8, 0.5];
+        }
+
+        this.terrainShader.setUniformsValues({
+            uCloudOffset: this.cloudOffset,
+            uAOWagon: aoWagon,
+            uAOBarn: aoBarn,
+            uAOBale0: baleSlots[0],
+            uAOBale1: baleSlots[1],
+            uAOBale2: baleSlots[2]
+        });
+    }
+
+    updateChaseCamera(dt) {
+        const w = this.wagon;
+
+        // chase the wagon's heading on a slower timescale so the camera
+        // visibly trails behind when the wagon turns
+        const kHead = 1.0 - Math.exp(-dt / this.cameraHeadingTau);
+        let dh = w.heading - this.cameraHeading;
+        // shortest-path wrap so we don't take the long way around the circle
+        while (dh > Math.PI) dh -= 2 * Math.PI;
+        while (dh < -Math.PI) dh += 2 * Math.PI;
+        this.cameraHeading += dh * kHead;
+
+        // offsets are wagon-local: X is rightward, Y is up, Z is backward
+        const cosH = Math.cos(this.cameraHeading);
+        const sinH = Math.sin(this.cameraHeading);
+
+        const side = this.cameraOffsetX;
+        const back = this.cameraOffsetZ;
+
+        const desiredEyeX = w.position[0] + side * sinH - back * cosH;
+        const desiredEyeY = w.position[1] + this.cameraOffsetY;
+        const desiredEyeZ = w.position[2] + side * cosH + back * sinH;
+
+        // mouse-driven pitch raises/lowers the target so the camera tilts up to the sky
+        const desiredTgtX = w.position[0];
+        const desiredTgtY = w.position[1] + this.cameraTargetUp + this.cameraPitchOffset;
+        const desiredTgtZ = w.position[2];
+
+        // frame-rate independent exponential smoothing
+        const k = 1.0 - Math.exp(-dt / this.cameraSmoothTau);
+
+        const eye = this.camera.position;
+        eye[0] += (desiredEyeX - eye[0]) * k;
+        eye[1] += (desiredEyeY - eye[1]) * k;
+        eye[2] += (desiredEyeZ - eye[2]) * k;
+
+        const tgt = this.camera.target;
+        tgt[0] += (desiredTgtX - tgt[0]) * k;
+        tgt[1] += (desiredTgtY - tgt[1]) * k;
+        tgt[2] += (desiredTgtZ - tgt[2]) * k;
     }
 
     getColliders() {
@@ -399,7 +626,7 @@ export class MyScene extends CGFscene {
             const released = this.wagon.releaseBale();
             if (released) {
                 released.pos[0] = dropPos[0];
-                released.pos[1] = 0.9;
+                released.pos[1] = 0;
                 released.pos[2] = dropPos[2];
             }
         }
@@ -469,7 +696,7 @@ export class MyScene extends CGFscene {
         // sits just below the terrain base so it never z-fights
         this.translate(0, this.terrainYOffset - 0.02, 0);
         this.rotate(-Math.PI / 2, 1, 0, 0);
-        this.scale(650, 650, 1);
+        this.scale(1500, 1500, 1);
 
         this.floorAppearance.apply();
         this.floor.display();
@@ -556,49 +783,103 @@ export class MyScene extends CGFscene {
         this.barn.display();
         this.popMatrix();
 
-        // draw every grounded bale and its pinpointing arrow
+        // bales: cull distant ones so we don't pay for unseen geometry
+        const camX = this.camera ? this.camera.position[0] : 0;
+        const camZ = this.camera ? this.camera.position[2] : 0;
+        const baleCullDistSq = 160 * 160;
+        const arrowRangeSq = this.baleArrowRange * this.baleArrowRange;
+
         for (const bale of this.bales) {
             if (bale.held) continue;
+            const cdx = bale.pos[0] - camX;
+            const cdz = bale.pos[2] - camZ;
+            if (cdx * cdx + cdz * cdz > baleCullDistSq) continue;
             const groundY = this.terrain.getTerrainHeight(bale.pos[0], bale.pos[2]);
             this.pushMatrix();
-            this.translate(bale.pos[0], groundY + bale.pos[1], bale.pos[2]);
-            this.scale(2.0, 2.0, 2.0);
+            // bale geometry is centred (half-y 0.25 * scale 1.5 = 0.375), so lift
+            // by that amount to sit the base flush with the terrain
+            this.translate(bale.pos[0], groundY + 0.375, bale.pos[2]);
+            this.scale(1.5, 1.5, 1.5);
             this.hayBale.display();
             this.popMatrix();
+        }
 
+        // batch the arrows under one shader bind so we don't switch per bale
+        this.hayBaleArrow.beginBatch();
+        for (const bale of this.bales) {
+            if (bale.held) continue;
+            const dx = bale.pos[0] - this.wagon.position[0];
+            const dz = bale.pos[2] - this.wagon.position[2];
+            if (dx * dx + dz * dz >= arrowRangeSq) continue;
+            const groundY = this.terrain.getTerrainHeight(bale.pos[0], bale.pos[2]);
             this.pushMatrix();
-            this.translate(bale.pos[0], groundY + bale.pos[1] + 1.6, bale.pos[2]);
-            this.hayBaleArrow.display();
+            this.translate(bale.pos[0], groundY + 0.75 + 1.4, bale.pos[2]);
+            this.hayBaleArrow.drawInstance();
             this.popMatrix();
         }
-
-        if (this.displayAxis) {
-            this.axis.display();
-        }
+        this.hayBaleArrow.endBatch();
     }
 
     displayMountainPanorama() {
         this.pushMatrix();
 
-        // sky shader must not affect the panorama
-        this.setActiveShader(this.defaultShader);
-
         this.gl.enable(this.gl.BLEND);
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
 
+        const hazeColor = this.getMountainHazeColor();
+
+        this.setActiveShader(this.mountainShader);
+
         this.pushMatrix();
-        this.translate(0, this.terrainYOffset - 20, 0);
+        this.translate(0, this.terrainYOffset - 44, 0);
         this.mountainFarAppearance.apply();
+        this.mountainFarTexture.bind(0);
+        this.mountainShader.setUniformsValues({
+            uTexture: 0,
+            uTint: [0.78, 0.82, 0.92],
+            uFogColor: hazeColor,
+            uFogStrength: 0.55,
+            uPanoramaHeight: this.mountainFarPanorama.height,
+            uSunInfluence: this.sunInfluence,
+            uSunDir: this.sunDirection
+        });
         this.mountainFarPanorama.display();
         this.popMatrix();
 
         this.pushMatrix();
-        this.translate(0, this.terrainYOffset - 10, 0);
+        this.translate(0, this.terrainYOffset - 7, 0);
         this.mountainAppearance.apply();
+        this.mountainTexture.bind(0);
+        this.mountainShader.setUniformsValues({
+            uTexture: 0,
+            uTint: [1.0, 1.0, 1.0],
+            uFogColor: hazeColor,
+            uFogStrength: 0.22,
+            uPanoramaHeight: this.mountainPanorama.height,
+            uSunInfluence: this.sunInfluence,
+            uSunDir: this.sunDirection
+        });
         this.mountainPanorama.display();
         this.popMatrix();
 
+        this.setActiveShader(this.defaultShader);
+
         this.gl.disable(this.gl.BLEND);
         this.popMatrix();
+    }
+
+    getMountainHazeColor() {
+        const sunElevation = this.sunDirection[1];
+        const day = [0.75, 0.85, 0.95];
+        const sunset = [0.92, 0.62, 0.45];
+        const night = [0.12, 0.15, 0.22];
+        const daySunsetMix = this.smoothstep(-0.15, 0.35, sunElevation);
+        const sunsetNightMix = this.smoothstep(-0.5, -0.1, sunElevation);
+        const out = [0, 0, 0];
+        for (let i = 0; i < 3; i++) {
+            const sd = sunset[i] + (day[i] - sunset[i]) * daySunsetMix;
+            out[i] = night[i] + (sd - night[i]) * sunsetNightMix;
+        }
+        return out;
     }
 }

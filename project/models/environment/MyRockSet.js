@@ -92,7 +92,16 @@ export class MyRockSet {
         // vertex perturbation can flip winding, so culling stays off
         this.scene.gl.disable(this.scene.gl.CULL_FACE);
 
+        const cam = this.scene.camera;
+        const camX = cam ? cam.position[0] : 0;
+        const camZ = cam ? cam.position[2] : 0;
+        const cullDistSq = 160 * 160;
+
         for (const rock of this.placements) {
+            const dx = rock.x - camX;
+            const dz = rock.z - camZ;
+            if (dx * dx + dz * dz > cullDistSq) continue;
+
             this.scene.pushMatrix();
 
             // sink slightly into the ground so rocks don't appear to float
