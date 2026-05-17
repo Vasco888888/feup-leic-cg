@@ -36,7 +36,7 @@ const HORSE_RADIUS = 1.8;
 const KINGPIN_WORLD_X = FRONT_WHEEL_OFFSET_X * WAGON_SCALE;
 const HORSE_FROM_KINGPIN = 2.0 * WAGON_SCALE;
 // stay clear of the terrain edge
-const WORLD_RADIUS = 240;
+const WORLD_RADIUS = 580;
 
 export class MyWagon extends CGFobject {
     constructor(scene) {

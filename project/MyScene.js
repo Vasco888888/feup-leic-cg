@@ -29,7 +29,7 @@ export class MyScene extends CGFscene {
 
         this.cloudSpeed = 0.01;
         this.cloudOffset = 0.0;
-        this.skyRadius = 260.0;
+        this.skyRadius = 760.0;
         this.terrainYOffset = 0.0;
 
         this.sunDirection = vec3.fromValues(-0.35, 0.72, 0.60);
@@ -87,13 +87,14 @@ export class MyScene extends CGFscene {
         this.hayBaleArrow = new MyHayBaleArrow(this);
         this.barn = new MyBarn(this);
         this.barnPos = { x: -20, z: -20 };
-        this.terrain = new MyTerrain(this, 128, 520, 10, 42);
-        this.rockSet = new MyRockSet(this, this.terrain, 30, 200, 123);
-        this.flowerSet = new MyFlowerSet(this, this.terrain, 50, 190, 777);
+        this.terrain = new MyTerrain(this, 96, 1200, 12, 42);
+        this.rockSet = new MyRockSet(this, this.terrain, 95, 520, 123);
+        this.flowerSet = new MyFlowerSet(this, this.terrain, 150, 500, 777);
         // many small patches so they hug the rolling hills
-        this.grassSet = new MyGrassSet(this, this.terrain, 400, 100, 250, 456);
-        this.mountainPanorama = new MyMountainPanorama(this, 80, 80, 250, 30);
-        this.mountainFarPanorama = new MyMountainPanorama(this, 80, 120, 255, 10);
+        this.grassSet = new MyGrassSet(this, this.terrain, 400, 100, 580, 456);
+        // panoramas sit just outside the terrain disc so the rim never occludes their foothills
+        this.mountainPanorama = new MyMountainPanorama(this, 96, 85, 615, 60);
+        this.mountainFarPanorama = new MyMountainPanorama(this, 96, 190, 720, 22);
 
         this.skyAppearance = new CGFappearance(this);
         this.skyAppearance.setAmbient(1.0, 1.0, 1.0, 1.0);
@@ -147,8 +148,8 @@ export class MyScene extends CGFscene {
             uGrassTexture: 0,
             uDirtTexture: 1,
             uFlowerTexture: 2,
-            uTerrainSize: 520.0,
-            uTerrainRadius: 255.0,
+            uTerrainSize: 1200.0,
+            uTerrainRadius: 595.0,
             uLightDir: this.sunDirection,
             uAmbientStrength: 0.18,
             uDiffuseStrength: 0.65,
@@ -553,7 +554,7 @@ export class MyScene extends CGFscene {
         // sits just below the terrain base so it never z-fights
         this.translate(0, this.terrainYOffset - 0.02, 0);
         this.rotate(-Math.PI / 2, 1, 0, 0);
-        this.scale(650, 650, 1);
+        this.scale(1500, 1500, 1);
 
         this.floorAppearance.apply();
         this.floor.display();
@@ -672,7 +673,7 @@ export class MyScene extends CGFscene {
         this.setActiveShader(this.mountainShader);
 
         this.pushMatrix();
-        this.translate(0, this.terrainYOffset - 20, 0);
+        this.translate(0, this.terrainYOffset - 44, 0);
         this.mountainFarAppearance.apply();
         this.mountainFarTexture.bind(0);
         this.mountainShader.setUniformsValues({
@@ -688,7 +689,7 @@ export class MyScene extends CGFscene {
         this.popMatrix();
 
         this.pushMatrix();
-        this.translate(0, this.terrainYOffset - 10, 0);
+        this.translate(0, this.terrainYOffset - 7, 0);
         this.mountainAppearance.apply();
         this.mountainTexture.bind(0);
         this.mountainShader.setUniformsValues({
