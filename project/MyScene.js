@@ -345,7 +345,7 @@ export class MyScene extends CGFscene {
 
         const cosH = Math.cos(this.wagon.heading);
         const sinH = Math.sin(this.wagon.heading);
-        const scale = 2.0; // matches WAGON_SCALE inside MyWagon.display
+        const scale = 1.5; // matches WAGON_SCALE inside MyWagon.display
 
         const world = lampsLocal.map(([lx, ly, lz]) => [
             this.wagon.position[0] + scale * (lx * cosH + lz * sinH),
@@ -413,11 +413,46 @@ export class MyScene extends CGFscene {
                 this.wagon.position[0],
                 this.wagon.position[2]
             );
+            this.applyWagonTerrainTilt(dt);
             this.handleHayBaleKeys();
             if (this.cameraFollow) this.updateChaseCamera(dt);
         }
 
         this.updateTerrainEnvironment();
+    }
+
+    applyWagonTerrainTilt(dt) {
+        const w = this.wagon;
+        const cosH = Math.cos(w.heading);
+        const sinH = Math.sin(w.heading);
+
+        // wheelbase/track in world units; mirrors MyWagon's wheel offsets
+        const halfWheelbase = 1.1 * 1.5;
+        const halfTrack     = 1.1 * 1.5;
+
+        const fx = w.position[0] + halfWheelbase * cosH;
+        const fz = w.position[2] - halfWheelbase * sinH;
+        const rx = w.position[0] - halfWheelbase * cosH;
+        const rz = w.position[2] + halfWheelbase * sinH;
+
+        const leftX  = w.position[0] - halfTrack * sinH;
+        const leftZ  = w.position[2] - halfTrack * cosH;
+        const rightX = w.position[0] + halfTrack * sinH;
+        const rightZ = w.position[2] + halfTrack * cosH;
+
+        const hf = this.terrain.getTerrainHeight(fx, fz);
+        const hr = this.terrain.getTerrainHeight(rx, rz);
+        const hl = this.terrain.getTerrainHeight(leftX, leftZ);
+        const hri = this.terrain.getTerrainHeight(rightX, rightZ);
+
+        const targetPitch = Math.atan2(hf - hr, halfWheelbase * 2.0);
+        // right-side-higher rolls the body LEFT (away from the rise), so flip sign
+        const targetRoll  = Math.atan2(hl - hri, halfTrack * 2.0);
+
+        // smooth so quick bumps don't make the body shake
+        const k = 1.0 - Math.exp(-dt / 0.12);
+        w.pitch += (targetPitch - w.pitch) * k;
+        w.roll  += (targetRoll  - w.roll)  * k;
     }
 
     updateTerrainEnvironment() {
@@ -686,7 +721,7 @@ export class MyScene extends CGFscene {
             const groundY = this.terrain.getTerrainHeight(bale.pos[0], bale.pos[2]);
             this.pushMatrix();
             this.translate(bale.pos[0], groundY + bale.pos[1], bale.pos[2]);
-            this.scale(2.0, 2.0, 2.0);
+            this.scale(1.5, 1.5, 1.5);
             this.hayBale.display();
             this.popMatrix();
 

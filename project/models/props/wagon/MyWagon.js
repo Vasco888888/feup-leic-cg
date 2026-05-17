@@ -7,7 +7,7 @@ import { MySeat } from './MySeat.js';
 import { MyLamp } from './MyLamp.js';
 import { CGFobjModel } from '../../../../lib/extra/CGFobjModel.js';
 
-const WAGON_SCALE = 2.0;
+const WAGON_SCALE = 1.5;
 const FRONT_WHEEL_OFFSET_X = 1.1;
 const REAR_WHEEL_OFFSET_X = -1.1;
 const WHEEL_OFFSET_Z = 1.1;
@@ -67,6 +67,10 @@ export class MyWagon extends CGFobject {
         // accumulated rolling angles (radians)
         this.frontSpin = 0;
         this.rearSpin = 0;
+
+        // pitch/roll set externally each frame from terrain sampling
+        this.pitch = 0;
+        this.roll = 0;
 
         // hay-bale carrying slots — holds references to scene bale entries
         this.carriedBales = [];
@@ -215,6 +219,9 @@ export class MyWagon extends CGFobject {
         // place and orient the whole rig in the world
         this.scene.translate(this.position[0], this.position[1], this.position[2]);
         this.scene.rotate(this.heading, 0, 1, 0);
+        // pitch nose up/down around the lateral axis, roll around the forward axis
+        this.scene.rotate(this.pitch, 0, 0, 1);
+        this.scene.rotate(this.roll, 1, 0, 0);
         this.scene.scale(WAGON_SCALE, WAGON_SCALE, WAGON_SCALE);
 
         // lift the bed so the wheels fit underneath
