@@ -38,6 +38,9 @@ export class MyScene extends CGFscene {
         this.sunInfluence = 1.0;
         this.moonInfluence = 0.0;
         this.pauseDayCycle = true;
+
+        // wagon physics needs a real dt between frames
+        this.lastUpdateTime = null;
     }
 
     init(application) {
@@ -287,6 +290,15 @@ export class MyScene extends CGFscene {
     }
 
     update(t) {
+        // dt in seconds, clamped so a tab-switch pause doesn't teleport the wagon
+        let dt = 0;
+        if (this.lastUpdateTime !== null) {
+            dt = (t - this.lastUpdateTime) / 1000.0;
+            if (dt < 0) dt = 0;
+            if (dt > 0.1) dt = 0.1;
+        }
+        this.lastUpdateTime = t;
+
         if (!this.pauseDayCycle) {
             this.dayTime = (t / 1000.0) * this.dayCycleSpeed;
         }
@@ -311,6 +323,10 @@ export class MyScene extends CGFscene {
         this.applyDynamicLighting();
 
         this.grassSet.update(t, this.sunInfluence);
+
+        if (this.wagon && dt > 0) {
+            this.wagon.update(dt);
+        }
     }
 
     updateLightStates() {
@@ -453,7 +469,6 @@ export class MyScene extends CGFscene {
 
         this.pushMatrix();
         this.translate(0, this.terrainYOffset, 0);
-        this.scale(2.0, 2.0, 2.0);
         this.wagon.display();
         this.popMatrix();
 
