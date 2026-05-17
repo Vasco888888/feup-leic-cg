@@ -22,6 +22,14 @@ uniform vec3  uLampColor;
 uniform float uLampRange;
 uniform float uLampStrength;
 
+// contact ambient occlusion: each disc is (x, z, radius, strength)
+// strength = 0 disables the disc
+uniform vec4 uAOWagon;
+uniform vec4 uAOBarn;
+uniform vec4 uAOBale0;
+uniform vec4 uAOBale1;
+uniform vec4 uAOBale2;
+
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
 }
@@ -131,6 +139,15 @@ void main() {
     float att1 = clamp(1.0 - d1 / uLampRange, 0.0, 1.0);
     float lampLight = (att0 * att0 + att1 * att1) * uLampStrength;
     lit += uLampColor * groundColor.rgb * lampLight;
+
+    // contact AO under static props and the wagon
+    float ao = 1.0;
+    ao *= 1.0 - (1.0 - smoothstep(uAOWagon.z * 0.35, uAOWagon.z, length(uAOWagon.xy - vWorldPos.xz))) * uAOWagon.w;
+    ao *= 1.0 - (1.0 - smoothstep(uAOBarn.z  * 0.35, uAOBarn.z,  length(uAOBarn.xy  - vWorldPos.xz))) * uAOBarn.w;
+    ao *= 1.0 - (1.0 - smoothstep(uAOBale0.z * 0.35, uAOBale0.z, length(uAOBale0.xy - vWorldPos.xz))) * uAOBale0.w;
+    ao *= 1.0 - (1.0 - smoothstep(uAOBale1.z * 0.35, uAOBale1.z, length(uAOBale1.xy - vWorldPos.xz))) * uAOBale1.w;
+    ao *= 1.0 - (1.0 - smoothstep(uAOBale2.z * 0.35, uAOBale2.z, length(uAOBale2.xy - vWorldPos.xz))) * uAOBale2.w;
+    lit *= ao;
 
     gl_FragColor = vec4(lit, 1.0);
 }

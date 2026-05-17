@@ -157,7 +157,12 @@ export class MyScene extends CGFscene {
             uLamp1Pos: [0, 0, 0],
             uLampColor: [1.0, 0.7, 0.2],
             uLampRange: 16.0,
-            uLampStrength: 0.0
+            uLampStrength: 0.0,
+            uAOWagon: [0, 0, 1, 0],
+            uAOBarn:  [0, 0, 1, 0],
+            uAOBale0: [0, 0, 1, 0],
+            uAOBale1: [0, 0, 1, 0],
+            uAOBale2: [0, 0, 1, 0]
         });
 
         this.skyShader = new CGFshader(this.gl, "shaders/sky.vert", "shaders/sky.frag");
@@ -409,6 +414,37 @@ export class MyScene extends CGFscene {
             this.handleHayBaleKeys();
             if (this.cameraFollow) this.updateChaseCamera(dt);
         }
+
+        this.updateTerrainEnvironment();
+    }
+
+    updateTerrainEnvironment() {
+        if (!this.terrainShader) return;
+
+        const aoOff = [0, 0, 1, 0];
+        const aoFor = (pos, radius, strength) => [pos[0], pos[2], radius, strength];
+
+        const aoWagon = this.wagon
+            ? aoFor(this.wagon.position, 4.2, 0.55)
+            : aoOff;
+        const aoBarn = this.barnPos
+            ? [this.barnPos.x, this.barnPos.z, 5.5, 0.6]
+            : aoOff;
+
+        const baleSlots = [aoOff, aoOff, aoOff];
+        let slot = 0;
+        for (const bale of this.bales) {
+            if (bale.held || slot >= 3) continue;
+            baleSlots[slot++] = [bale.pos[0], bale.pos[2], 1.8, 0.5];
+        }
+
+        this.terrainShader.setUniformsValues({
+            uAOWagon: aoWagon,
+            uAOBarn: aoBarn,
+            uAOBale0: baleSlots[0],
+            uAOBale1: baleSlots[1],
+            uAOBale2: baleSlots[2]
+        });
     }
 
     updateChaseCamera(dt) {
