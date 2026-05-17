@@ -470,7 +470,8 @@ export class MyScene extends CGFscene {
 
         // Display Hay Bale
         this.pushMatrix();
-        this.translate(5, this.terrainYOffset + 0.25, 5);
+        this.translate(5, this.terrainYOffset + 0.9, 5);
+        this.scale(2.0, 2.0, 2.0);
         this.hayBale.display();
         this.popMatrix();
 
