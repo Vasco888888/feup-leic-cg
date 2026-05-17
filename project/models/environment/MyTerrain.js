@@ -13,10 +13,10 @@ export class MyTerrain extends CGFobject {
         this.maxHeight = maxHeight;
         this.seed = seed;
 
-        this.octaves = 4;
-        this.persistence = 0.45;
-        this.lacunarity = 2.2;
-        this.baseFrequency = 2.0; // controls how wide the hills are
+        this.octaves = 5;
+        this.persistence = 0.55;
+        this.lacunarity = 2.4;
+        this.baseFrequency = 3.0; // controls how wide the hills are
 
         this.heightData = [];
 
