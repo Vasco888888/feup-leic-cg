@@ -100,15 +100,35 @@ export class MyFlowerSet {
             });
         }
 
-        // Generate placements
-        for (let i = 0; i < this.count; i++) {
+        // Collect rock obstacles to avoid placing flowers inside rocks
+        const obstacles = [];
+        if (this.scene.rockSet) {
+            for (const r of this.scene.rockSet.placements) {
+                obstacles.push({
+                    x: r.x, z: r.z,
+                    r: Math.max(r.scaleX, r.scaleZ) * 1.1 + 0.3
+                });
+            }
+        }
+
+        // Generate placements with retry so we can skip spots that overlap rocks
+        let attempts = 0;
+        const maxAttempts = this.count * 60;
+        while (this.placements.length < this.count && attempts < maxAttempts) {
+            const i = attempts;
+            attempts++;
+
             const angle = this._seededRandom(i * 4) * Math.PI * 2;
             const dist = Math.sqrt(this._seededRandom(i * 4 + 1)) * this.areaRadius * 0.85;
             const worldX = Math.cos(angle) * dist;
             const worldZ = Math.sin(angle) * dist;
-            const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
 
             const scale = 0.6 + this._seededRandom(i * 4 + 2) * 1.0;
+            const flowerRadius = scale * 0.5;
+
+            if (this._collidesWithObstacles(worldX, worldZ, flowerRadius, obstacles)) continue;
+
+            const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
             const rotY = this._seededRandom(i * 4 + 3) * Math.PI * 2;
             const shapeIdx = Math.floor(this._seededRandom(i * 13) * this.flowerShapes.length);
 
@@ -117,6 +137,16 @@ export class MyFlowerSet {
                 scale, rotY, shapeIdx
             });
         }
+    }
+
+    _collidesWithObstacles(x, z, padding, obstacles) {
+        for (const o of obstacles) {
+            const dx = x - o.x;
+            const dz = z - o.z;
+            const minDist = o.r + padding;
+            if (dx * dx + dz * dz < minDist * minDist) return true;
+        }
+        return false;
     }
 
     display() {

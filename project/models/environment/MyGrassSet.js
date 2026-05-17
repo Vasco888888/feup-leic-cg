@@ -23,25 +23,24 @@ export class MyGrassSet {
             "shaders/grass.vert",
             "shaders/grass.frag"
         );
-        // Collect obstacles (rocks and flowers) for shader culling
-        const obsData = [];
+
+        // Collect obstacles (rocks and flowers) so grass patches don't overlap them
+        this.obstacles = [];
         if (scene.rockSet) {
-            for(const p of scene.rockSet.placements) {
-                if (obsData.length >= 80 * 3) break;
-                // Rock radius based on scale
-                obsData.push(p.x, p.z, Math.max(p.scaleX, p.scaleZ) * 2.0); 
+            for (const r of scene.rockSet.placements) {
+                this.obstacles.push({
+                    x: r.x, z: r.z,
+                    r: Math.max(r.scaleX, r.scaleZ) * 1.2 + 1.0
+                });
             }
         }
         if (scene.flowerSet) {
-            for(const p of scene.flowerSet.placements) {
-                if (obsData.length >= 80 * 3) break;
-                // Flower radius based on scale
-                obsData.push(p.x, p.z, p.scale * 1.8); 
+            for (const f of scene.flowerSet.placements) {
+                this.obstacles.push({
+                    x: f.x, z: f.z,
+                    r: f.scale * 0.5 + 0.6
+                });
             }
-        }
-        // Pad the rest of the array with zeros to satisfy the uniform array size
-        while (obsData.length < 80 * 3) {
-            obsData.push(0, 0, 0);
         }
 
         this.grassShader.setUniformsValues({
@@ -52,8 +51,7 @@ export class MyGrassSet {
             uSunInfluence: 1.0,
             uPatchPos: [0, 0, 0],
             uRotY: 0,
-            uScale: [1, 1],
-            uObstacles: obsData
+            uScale: [1, 1]
         });
 
         // Grass appearance (no texture needed — shader colours it)
@@ -135,6 +133,9 @@ export class MyGrassSet {
             if (isDead && zone < 0.4) continue;
             if (!isDead && zone > -0.2) continue;
 
+            // Skip if the patch centre overlaps a rock or flower
+            if (this._collidesWithObstacles(worldX, worldZ)) continue;
+
             const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
             const patchIdx = Math.floor(this._seededRandom(idx * 3 + 2) * this.patchPool.length);
 
@@ -151,6 +152,15 @@ export class MyGrassSet {
         }
 
         return placements;
+    }
+
+    _collidesWithObstacles(x, z) {
+        for (const o of this.obstacles) {
+            const dx = x - o.x;
+            const dz = z - o.z;
+            if (dx * dx + dz * dz < o.r * o.r) return true;
+        }
+        return false;
     }
 
     update(t, sunInfluence = 1.0) {
