@@ -33,8 +33,8 @@ export class MyGrassPatch extends CGFobject {
             const bx = Math.cos(angle) * dist;
             const bz = Math.sin(angle) * dist;
 
-            const height = 0.8 + this._seededRandom(i * 6 + 2) * 1.0;
-            const width = 0.25 + this._seededRandom(i * 6 + 3) * 0.2;
+            const height = 0.45 + this._seededRandom(i * 6 + 2) * 0.55;
+            const width = 0.16 + this._seededRandom(i * 6 + 3) * 0.14;
             const rotY = this._seededRandom(i * 6 + 4) * Math.PI;
             const bendAmount = this._seededRandom(i * 6 + 5) * 0.6;
 

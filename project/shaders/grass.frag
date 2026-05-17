@@ -59,8 +59,10 @@ void main() {
 
 
     if (uIsDead == 1) {
-        // shift toward a warmer, sun-dried tone instead of desaturating
-        bladeColor = mix(bladeColor, vec3(bladeColor.r * 1.1, bladeColor.g * 0.9, bladeColor.b * 0.6), 0.5);
+        // saturated wheat: honey gold base climbing to a bright yellow tip
+        vec3 wheatBase = vec3(0.72, 0.52, 0.12);
+        vec3 wheatTip  = vec3(0.98, 0.84, 0.22);
+        bladeColor = mix(wheatBase, wheatTip, colorFactor);
     }
 
 

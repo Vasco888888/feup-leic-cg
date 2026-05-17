@@ -91,7 +91,7 @@ export class MyScene extends CGFscene {
         this.rockSet = new MyRockSet(this, this.terrain, 95, 520, 123);
         this.flowerSet = new MyFlowerSet(this, this.terrain, 150, 500, 777);
         // many small patches so they hug the rolling hills
-        this.grassSet = new MyGrassSet(this, this.terrain, 400, 100, 580, 456);
+        this.grassSet = new MyGrassSet(this, this.terrain, 3500, 480, 580, 456);
         // panoramas sit just outside the terrain disc so the rim never occludes their foothills
         this.mountainPanorama = new MyMountainPanorama(this, 96, 85, 615, 60);
         this.mountainFarPanorama = new MyMountainPanorama(this, 96, 190, 720, 22);

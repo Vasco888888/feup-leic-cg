@@ -17,23 +17,8 @@ export class MyGrassSet {
             "shaders/grass.frag"
         );
 
+        // grass freely overlaps rocks and flowers, it just sprouts everywhere
         this.obstacles = [];
-        if (scene.rockSet) {
-            for (const r of scene.rockSet.placements) {
-                this.obstacles.push({
-                    x: r.x, z: r.z,
-                    r: Math.max(r.scaleX, r.scaleZ) * 1.2 + 1.0
-                });
-            }
-        }
-        if (scene.flowerSet) {
-            for (const f of scene.flowerSet.placements) {
-                this.obstacles.push({
-                    x: f.x, z: f.z,
-                    r: f.scale * 0.5 + 0.6
-                });
-            }
-        }
 
         this.grassShader.setUniformsValues({
             uTime: 0,
@@ -57,9 +42,9 @@ export class MyGrassSet {
         const poolSize = 6;
         for (let i = 0; i < poolSize; i++) {
             // keep patches small so they hug rolling hills
-            const radius = 3.0 + this._seededRandom(i * 2 + 1) * 3.0;
+            const radius = 2.6 + this._seededRandom(i * 2 + 1) * 2.4;
             const area = Math.PI * radius * radius;
-            const bladeCount = Math.floor(area * 3.5);
+            const bladeCount = Math.floor(area * 7.0);
             this.patchPool.push(new MyGrassPatch(scene, bladeCount, radius, seed + i * 37));
         }
 
@@ -114,13 +99,10 @@ export class MyGrassSet {
             const pathHalfWidth = 0.034;
             if (Math.min(d1, Math.min(d2, d3)) < pathHalfWidth) continue;
 
-            // wheat lives in zone peaks, green in valleys; gap between -0.2 and 0.4 keeps them apart
+            // split the field into green/wheat zones with a thin buffer between them
             const zone = Math.sin(worldX * 0.03) * Math.cos(worldZ * 0.03);
-
-            if (isDead && zone < 0.4) continue;
-            if (!isDead && zone > -0.2) continue;
-
-            if (this._collidesWithObstacles(worldX, worldZ)) continue;
+            if (isDead && zone < 0.55) continue;
+            if (!isDead && zone > 0.45) continue;
 
             const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
             const patchIdx = Math.floor(this._seededRandom(idx * 3 + 2) * this.patchPool.length);
