@@ -61,7 +61,11 @@ export class MyHayBaleArrow extends CGFobject {
     }
 
     display() {
+        const gl = this.scene.gl;
+        // visible from any angle
+        gl.disable(gl.CULL_FACE);
         this.material.apply();
         super.display();
+        gl.enable(gl.CULL_FACE);
     }
 }
