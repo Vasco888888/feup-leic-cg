@@ -1,27 +1,9 @@
 import { CGFobject } from "../../../lib/CGF.js";
 
 /**
- * Parameter-based flower built from simple primitives.
- *
- * Components:
- *  - Stem:       thin cylinder (MyCylinder-style)
- *  - Receptacle: small sphere at the top
- *  - Petals:     elliptical quads arranged radially
- *
- * All parameters foster natural randomness when varied per instance.
+ * Parameter-based flower built from stem, receptacle and radial petals.
  */
 export class MyFlower extends CGFobject {
-    /**
-     * @param {CGFscene} scene
-     * @param {number} petalCount     Number of petals (4–10)
-     * @param {number} petalLength    Length of each petal
-     * @param {number} petalWidth     Width of each petal
-     * @param {number} stemHeight     Height of the stem
-     * @param {number} stemRadius     Radius of the stem
-     * @param {number} receptacleRadius  Size of the centre
-     * @param {number} petalColor     [r, g, b] petal colour
-     * @param {number} receptacleColor [r, g, b] centre colour
-     */
     constructor(
         scene,
         petalCount = 6,
@@ -44,13 +26,10 @@ export class MyFlower extends CGFobject {
         this.petalColor = petalColor;
         this.receptacleColor = receptacleColor;
 
-        // Build sub-geometries
         this.stemGeom = this._buildStem(8);
         this.receptacleGeom = this._buildReceptacle(8, 6);
         this.petalGeom = this._buildPetal();
     }
-
-    // ── Stem: simple cylinder along Y axis ──
 
     _buildStem(slices) {
         const verts = [], norms = [], texs = [], inds = [];
@@ -58,7 +37,6 @@ export class MyFlower extends CGFobject {
         const r = this.stemRadius;
         const h = this.stemHeight;
 
-        // Two rings: bottom (y=0) and top (y=h)
         for (let ring = 0; ring <= 1; ring++) {
             const y = ring * h;
             for (let i = 0; i <= slices; i++) {
@@ -79,8 +57,6 @@ export class MyFlower extends CGFobject {
 
         return this._makeGeom(verts, norms, texs, inds);
     }
-
-    // ── Receptacle: small half-sphere at top of stem ──
 
     _buildReceptacle(slices, stacks) {
         const verts = [], norms = [], texs = [], inds = [];
@@ -117,31 +93,26 @@ export class MyFlower extends CGFobject {
         return this._makeGeom(verts, norms, texs, inds);
     }
 
-    // ── Petal: elliptical/teardrop shape (fan of triangles) ──
-
     _buildPetal() {
         const l = this.petalLength;
         const w = this.petalWidth / 2;
-        const segments = 10; // edge resolution
+        const segments = 10;
 
         const verts = [];
         const norms = [];
         const texs = [];
         const inds = [];
 
-        // Centre vertex (for fan triangulation)
+        // centre vertex for fan triangulation
         verts.push(l * 0.45, 0, 0);
         norms.push(0, 0, 1);
         texs.push(0.45, 0.5);
 
-        // Edge vertices in a teardrop/ellipse shape
         for (let i = 0; i <= segments; i++) {
-            const t = i / segments; // 0 → 1 around the edge
+            const t = i / segments;
             const angle = t * Math.PI * 2;
 
-            // Teardrop shape: narrower at base (t=0), wider in middle, pointed at tip
-            // X goes from 0 (base) to l (tip) and back
-            // Y follows a sine envelope modulated for teardrop
+            // teardrop: sine envelope raised to 0.7 so the tip stays pointed
             const x = l * (0.5 + 0.5 * Math.cos(angle + Math.PI));
             const envelope = Math.pow(Math.sin(Math.PI * (x / l)), 0.7);
             const y = w * Math.sin(angle) * envelope;
@@ -151,7 +122,6 @@ export class MyFlower extends CGFobject {
             texs.push(x / l, 0.5 - y / (2 * w));
         }
 
-        // Fan triangles from centre (vertex 0) to edge vertices
         for (let i = 1; i <= segments; i++) {
             inds.push(0, i, i + 1);
         }
@@ -173,34 +143,29 @@ export class MyFlower extends CGFobject {
     display() {
         const scene = this.scene;
 
-        // ── Draw stem ──
         scene.pushMatrix();
-        // Stem colour (green)
         scene.diffuseColor = [0.2, 0.5, 0.15, 1.0];
         this.stemGeom.display();
         scene.popMatrix();
 
-        // ── Draw flower head at top of stem ──
         scene.pushMatrix();
         scene.translate(0, this.stemHeight, 0);
 
-        // Tilt the flower slightly forward
+        // tilt the flower head slightly forward
         scene.rotate(-Math.PI / 8, 1, 0, 0);
 
-        // ── Draw petals ──
         scene.gl.disable(scene.gl.CULL_FACE);
         const angleStep = (2 * Math.PI) / this.petalCount;
         for (let i = 0; i < this.petalCount; i++) {
             scene.pushMatrix();
             scene.rotate(i * angleStep, 0, 1, 0);
-            // Tilt petal outward slightly
+            // tilt petal outward
             scene.rotate(Math.PI / 6, 0, 0, 1);
             this.petalGeom.display();
             scene.popMatrix();
         }
         scene.gl.enable(scene.gl.CULL_FACE);
 
-        // ── Draw receptacle (centre) ──
         scene.gl.disable(scene.gl.CULL_FACE);
         this.receptacleGeom.display();
         scene.gl.enable(scene.gl.CULL_FACE);

@@ -15,8 +15,6 @@ uniform vec3      uLightDir;
 uniform float     uAmbientStrength;
 uniform float     uDiffuseStrength;
 
-// ────────── Noise helpers ──────────
-
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
 }
@@ -45,8 +43,7 @@ float fbm(vec2 p) {
     return value;
 }
 
-// ────────── Wagon path mask ──────────
-
+// wagon path mask
 float pathMask(vec2 worldXZ) {
     vec2 uv = worldXZ / uTerrainSize + 0.5;
 
@@ -60,17 +57,14 @@ float pathMask(vec2 worldXZ) {
     return smoothstep(pathWidth - pathEdge, pathWidth + pathEdge, dist);
 }
 
-// ────────── Main ──────────
-
 void main() {
-    // ── Circular border ──
+    // circular border clip
     float distFromCenter = length(vWorldPos.xz);
     if (distFromCenter > uTerrainRadius) {
         discard;
     }
     float edgeFade = 1.0 - smoothstep(uTerrainRadius * 0.85, uTerrainRadius, distFromCenter);
 
-    // ── Tile UVs ──
     float tilingFactor = 40.0;
     vec2 tiledUV = fract(vTextureCoord * tilingFactor);
 
@@ -78,43 +72,32 @@ void main() {
     vec4 dirtColor   = texture2D(uDirtTexture,   tiledUV);
     vec4 flowerColor = texture2D(uFlowerTexture,  tiledUV);
 
-    // ── Noise-based dirt patches ──
     vec2 patchCoords = vWorldPos.xz * 0.008;
     float patchNoise = fbm(patchCoords);
     float dirtPatchMask = smoothstep(0.58, 0.72, patchNoise);
 
-    // ── Slope-based blending ──
     float slope = 1.0 - dot(normalize(vNormal), vec3(0.0, 1.0, 0.0));
     float slopeDirt = smoothstep(0.25, 0.55, slope);
 
-    // ── Combine dirt factors ──
     float dirtFactor = max(dirtPatchMask * 0.7, slopeDirt);
 
-    // ── Path blending ──
     float pathGrass = pathMask(vWorldPos.xz);
     dirtFactor = max(dirtFactor, 1.0 - pathGrass);
 
-    // ── Flower clusters (FBM noise at different scale) ──
+    // two fbm layers at different scales produce cluster spots
     float flowerNoise = fbm(vWorldPos.xz * 0.05 + vec2(7.3, 2.1));
-    // Second layer of noise for variety
     float flowerNoise2 = fbm(vWorldPos.xz * 0.12 + vec2(13.7, 5.9));
-    // Combine: clusters where both noise layers are high
     float flowerMask = smoothstep(0.42, 0.58, flowerNoise) * smoothstep(0.38, 0.55, flowerNoise2);
-    // Flowers only on flat grassy areas (not on dirt, path, or slopes)
+    // restrict flowers to flat grass, away from dirt and path
     float slopeFlat = 1.0 - smoothstep(0.08, 0.25, slope);
     flowerMask *= slopeFlat * pathGrass * (1.0 - dirtFactor);
 
-    // ── Final blend: grass → flowers → dirt ──
-    // First blend grass with flowers
     vec4 groundColor = mix(grassColor, flowerColor, clamp(flowerMask, 0.0, 1.0));
-    // Then blend with dirt on top
     groundColor = mix(groundColor, dirtColor, clamp(dirtFactor, 0.0, 1.0));
 
-    // Fade terrain edges
     vec3 edgeColor = vec3(0.28, 0.42, 0.18);
     groundColor.rgb = mix(edgeColor, groundColor.rgb, edgeFade);
 
-    // ── Lighting ──
     float ambient = uAmbientStrength;
     float diffuse = max(dot(normalize(vNormal), normalize(uLightDir)), 0.0);
     float light = ambient + diffuse * uDiffuseStrength;

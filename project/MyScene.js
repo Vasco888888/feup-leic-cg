@@ -3,6 +3,7 @@ import { MySkyDome } from "./models/environment/MySkyDome.js";
 import { MyPlane } from "./models/primitives/MyPlane.js";
 import { MyWagon } from "./models/props/wagon/MyWagon.js";
 import { MyHayBale } from "./models/props/hay-bale/MyHayBale.js";
+import { MyHayBaleArrow } from "./models/props/hay-bale/MyHayBaleArrow.js";
 import { MyBarn } from "./models/props/barn/MyBarn.js";
 import { MyTerrain } from "./models/environment/MyTerrain.js";
 import { MyRockSet } from "./models/environment/MyRockSet.js";
@@ -24,7 +25,7 @@ export class MyScene extends CGFscene {
         this.showGrass = true;
 
         this.sunLightEnabled = true;
-        this.spotLightEnabled = false; // Disabled by default so the sun controls the lighting
+        this.spotLightEnabled = false; // off by default so the sun controls the lighting
 
         this.cloudSpeed = 0.01;
         this.cloudOffset = 0.0;
@@ -38,6 +39,22 @@ export class MyScene extends CGFscene {
         this.sunInfluence = 1.0;
         this.moonInfluence = 0.0;
         this.pauseDayCycle = true;
+
+        // wagon physics needs a real dt between frames
+        this.lastUpdateTime = null;
+
+        // hay bales scattered around the field; each tracks its own held state
+        this.bales = [
+            { pos: [5, 0.9, 5], held: false },
+            { pos: [14, 0.9, -8], held: false },
+            { pos: [-9, 0.9, 13], held: false }
+        ];
+        // reach point sits ahead of the wagon centre (near the horse), with a
+        // generous radius so the bale only needs to be in front of the rig
+        this.pickupReachOffset = 5.0;
+        this.balePickupRadius = 4.5;
+        this.prevPickupKey = false;
+        this.prevDropKey = false;
     }
 
     init(application) {
@@ -59,15 +76,16 @@ export class MyScene extends CGFscene {
         this.floor = new MyPlane(this, 20);
         this.wagon = new MyWagon(this);
         this.hayBale = new MyHayBale(this);
+        this.hayBaleArrow = new MyHayBaleArrow(this);
         this.barn = new MyBarn(this);
         this.barnPos = { x: -20, z: -20 };
         this.terrain = new MyTerrain(this, 128, 520, 10, 42);
         this.rockSet = new MyRockSet(this, this.terrain, 30, 200, 123);
         this.flowerSet = new MyFlowerSet(this, this.terrain, 50, 190, 777);
-        // Using many smaller patches (400 green, 100 wheat) so they hug the rolling hills perfectly
+        // many small patches so they hug the rolling hills
         this.grassSet = new MyGrassSet(this, this.terrain, 400, 100, 250, 456);
-        this.mountainPanorama = new MyMountainPanorama(this, 80, 80, 250, 30); // Nearer, denser
-        this.mountainFarPanorama = new MyMountainPanorama(this, 80, 120, 255, 10); // Farther, taller, larger peaks
+        this.mountainPanorama = new MyMountainPanorama(this, 80, 80, 250, 30);
+        this.mountainFarPanorama = new MyMountainPanorama(this, 80, 120, 255, 10);
 
         this.skyAppearance = new CGFappearance(this);
         this.skyAppearance.setAmbient(1.0, 1.0, 1.0, 1.0);
@@ -97,7 +115,7 @@ export class MyScene extends CGFscene {
         this.mountainAppearance.setTextureWrap('REPEAT', 'CLAMP_TO_EDGE');
 
         this.mountainFarAppearance = new CGFappearance(this);
-        this.mountainFarAppearance.setAmbient(0.5, 0.5, 0.6, 1); // Darker/Silhouetted far layer
+        this.mountainFarAppearance.setAmbient(0.5, 0.5, 0.6, 1); // darker silhouette for the far layer
         this.mountainFarAppearance.setDiffuse(0.5, 0.5, 0.6, 1);
         this.mountainFarAppearance.setSpecular(0, 0, 0, 1);
         this.mountainFarAppearance.setShininess(1.0);
@@ -105,7 +123,7 @@ export class MyScene extends CGFscene {
         this.mountainFarAppearance.setTexture(this.mountainFarTexture);
         this.mountainFarAppearance.setTextureWrap('REPEAT', 'CLAMP_TO_EDGE');
 
-        // ── Terrain appearance & shader ──
+
         this.terrainAppearance = new CGFappearance(this);
         this.terrainAppearance.setAmbient(0.8, 0.8, 0.8, 1.0);
         this.terrainAppearance.setDiffuse(1.0, 1.0, 1.0, 1.0);
@@ -177,9 +195,9 @@ export class MyScene extends CGFscene {
         }
 
         if (this.lights.length > 2) {
-            this.lights[2].setPosition(1.3, 1.3, 0.75, 1); // Lamp 1 position
+            this.lights[2].setPosition(1.3, 1.3, 0.75, 1); // lamp 1
             this.lights[2].setAmbient(0, 0, 0, 1);
-            this.lights[2].setDiffuse(1.0, 0.7, 0.2, 1); // Warm light
+            this.lights[2].setDiffuse(1.0, 0.7, 0.2, 1); // warm
             this.lights[2].setSpecular(1.0, 0.7, 0.2, 1);
             this.lights[2].setConstantAttenuation(0.1);
             this.lights[2].setLinearAttenuation(0.2);
@@ -189,9 +207,9 @@ export class MyScene extends CGFscene {
         }
 
         if (this.lights.length > 3) {
-            this.lights[3].setPosition(1.3, 1.3, -0.75, 1); // Lamp 2 position
+            this.lights[3].setPosition(1.3, 1.3, -0.75, 1); // lamp 2
             this.lights[3].setAmbient(0, 0, 0, 1);
-            this.lights[3].setDiffuse(1.0, 0.7, 0.2, 1); // Warm light
+            this.lights[3].setDiffuse(1.0, 0.7, 0.2, 1); // warm
             this.lights[3].setSpecular(1.0, 0.7, 0.2, 1);
             this.lights[3].setConstantAttenuation(0.1);
             this.lights[3].setLinearAttenuation(0.2);
@@ -201,9 +219,9 @@ export class MyScene extends CGFscene {
         }
 
         if (this.lights.length > 3) {
-            this.lights[3].setPosition(1.4, 1.45, -0.6, 1); // Lamp 2 position
+            this.lights[3].setPosition(1.4, 1.45, -0.6, 1); // lamp 2
             this.lights[3].setAmbient(0, 0, 0, 1);
-            this.lights[3].setDiffuse(1.0, 0.7, 0.2, 1); // Warm light
+            this.lights[3].setDiffuse(1.0, 0.7, 0.2, 1); // warm
             this.lights[3].setSpecular(1.0, 0.7, 0.2, 1);
             this.lights[3].setConstantAttenuation(0.1);
             this.lights[3].setLinearAttenuation(0.2);
@@ -223,7 +241,7 @@ export class MyScene extends CGFscene {
     applyDynamicLighting() {
         const sunElevation = this.sunDirection[1];
 
-        // Sun and moon are blended through twilight so transitions are gradual.
+        // blend sun/moon through twilight for gradual transitions
         this.sunInfluence = this.smoothstep(-0.12, 0.32, sunElevation);
         this.moonInfluence = 1.0 - this.smoothstep(-0.32, 0.12, sunElevation);
 
@@ -275,7 +293,7 @@ export class MyScene extends CGFscene {
         }
 
         if (this.lights.length > 2) {
-            // Lamp is on when sun is low
+            // lamps on when sun is low
             if (this.moonInfluence > 0.5) {
                 this.lights[2].enable();
                 if (this.lights.length > 3) this.lights[3].enable();
@@ -287,6 +305,16 @@ export class MyScene extends CGFscene {
     }
 
     update(t) {
+        // dt in seconds, clamped so a tab-switch pause doesn't teleport the wagon
+        let dt = 0;
+        if (this.lastUpdateTime !== null) {
+            dt = (t - this.lastUpdateTime) / 1000.0;
+            if (dt < 0) dt = 0;
+            if (dt > 0.1) dt = 0.1;
+        }
+        this.lastUpdateTime = t;
+        this.currentTime = t;
+
         if (!this.pauseDayCycle) {
             this.dayTime = (t / 1000.0) * this.dayCycleSpeed;
         }
@@ -310,9 +338,74 @@ export class MyScene extends CGFscene {
 
         this.applyDynamicLighting();
 
-        // Light direction and intensity are updated in applyDynamicLighting.
-        // Update grass wind animation and day/night shading.
         this.grassSet.update(t, this.sunInfluence);
+
+        if (this.wagon && dt > 0) {
+            this.wagon.update(dt, this.getColliders());
+            // wheels need to ride on the terrain, not the abstract plane at Y=0
+            this.wagon.position[1] = this.terrain.getTerrainHeight(
+                this.wagon.position[0],
+                this.wagon.position[2]
+            );
+            this.handleHayBaleKeys();
+        }
+    }
+
+    getColliders() {
+        const colliders = this.rockSet ? this.rockSet.getColliders() : [];
+
+        // barn footprint: 10x10 square, treated as a tight circle
+        colliders.push({ x: this.barnPos.x, z: this.barnPos.z, radius: 6.5 });
+
+        // every grounded hay bale is a soft collider so the horse can muzzle
+        // up to it, but the wagon bed still bumps into it
+        for (const bale of this.bales) {
+            if (!bale.held) {
+                colliders.push({ x: bale.pos[0], z: bale.pos[2], radius: 1.5, soft: true });
+            }
+        }
+
+        return colliders;
+    }
+
+    handleHayBaleKeys() {
+        if (!this.gui) return;
+        const pickupKey = this.gui.isKeyPressed("KeyP");
+        const dropKey = this.gui.isKeyPressed("KeyL");
+
+        // pickup: find the nearest grounded bale inside the reach circle
+        if (pickupKey && !this.prevPickupKey && !this.wagon.isFull()) {
+            const reachX = this.wagon.position[0] + this.pickupReachOffset * Math.cos(this.wagon.heading);
+            const reachZ = this.wagon.position[2] - this.pickupReachOffset * Math.sin(this.wagon.heading);
+            const r2 = this.balePickupRadius * this.balePickupRadius;
+            let best = null;
+            let bestDist = Infinity;
+            for (const bale of this.bales) {
+                if (bale.held) continue;
+                const dx = reachX - bale.pos[0];
+                const dz = reachZ - bale.pos[2];
+                const d2 = dx * dx + dz * dz;
+                if (d2 <= r2 && d2 < bestDist) {
+                    best = bale;
+                    bestDist = d2;
+                }
+            }
+            if (best) this.wagon.pickup(best);
+        }
+
+        // drop the most recently picked-up bale at the rear of the wagon
+        if (dropKey && !this.prevDropKey && this.wagon.carriedBales.length > 0) {
+            const dropPos = this.wagon.dropPosition();
+            const released = this.wagon.releaseBale();
+            if (released) {
+                released.pos[0] = dropPos[0];
+                released.pos[1] = 0.9;
+                released.pos[2] = dropPos[2];
+            }
+        }
+
+        this.prevPickupKey = pickupKey;
+        this.prevDropKey = dropKey;
     }
 
     updateLightStates() {
@@ -340,7 +433,7 @@ export class MyScene extends CGFscene {
         this.pushMatrix();
         this.scale(this.skyRadius, this.skyRadius, this.skyRadius);
 
-        // Gameplay is inside the dome, so render both sides for this pass.
+        // camera lives inside the dome, so render both sides
         this.gl.disable(this.gl.CULL_FACE);
 
         this.skyAppearance.apply();
@@ -357,7 +450,7 @@ export class MyScene extends CGFscene {
             this.setActiveShader(this.cloudShader);
             this.cloudShader.setUniformsValues({ uCloudOffset: this.cloudOffset });
             this.pushMatrix();
-            // Draw clouds on a slightly inner shell to avoid z-overlap with the base sky.
+            // inner shell avoids z-fighting with the base sky
             this.scale(0.985, 0.985, 0.985);
             this.skyDome.display();
             this.popMatrix();
@@ -373,7 +466,7 @@ export class MyScene extends CGFscene {
     displayFloor() {
         this.pushMatrix();
 
-        // Put a large green floor slightly below the terrain base.
+        // sits just below the terrain base so it never z-fights
         this.translate(0, this.terrainYOffset - 0.02, 0);
         this.rotate(-Math.PI / 2, 1, 0, 0);
         this.scale(650, 650, 1);
@@ -387,13 +480,11 @@ export class MyScene extends CGFscene {
     displayTerrain() {
         this.pushMatrix();
 
-        // Position terrain below the axis base
         this.translate(0, this.terrainYOffset, 0);
 
         this.terrainAppearance.apply();
         this.setActiveShader(this.terrainShader);
 
-        // Bind textures to the correct sampler units
         this.grassTexture.bind(0);
         this.dirtTexture.bind(1);
         this.flowerTexture.bind(2);
@@ -455,25 +546,31 @@ export class MyScene extends CGFscene {
 
         this.displayMountainPanorama();
 
-        // Display Wagon
         this.pushMatrix();
         this.translate(0, this.terrainYOffset, 0);
-        this.scale(2.0, 2.0, 2.0); // 2x scale
         this.wagon.display();
         this.popMatrix();
 
-        // Display Barn
         this.pushMatrix();
         this.translate(this.barnPos.x, this.terrainYOffset, this.barnPos.z);
         this.barn.display();
         this.popMatrix();
 
-        // Display Hay Bale
-        this.pushMatrix();
-        this.translate(5, this.terrainYOffset + 0.9, 5);
-        this.scale(2.0, 2.0, 2.0);
-        this.hayBale.display();
-        this.popMatrix();
+        // draw every grounded bale and its pinpointing arrow
+        for (const bale of this.bales) {
+            if (bale.held) continue;
+            const groundY = this.terrain.getTerrainHeight(bale.pos[0], bale.pos[2]);
+            this.pushMatrix();
+            this.translate(bale.pos[0], groundY + bale.pos[1], bale.pos[2]);
+            this.scale(2.0, 2.0, 2.0);
+            this.hayBale.display();
+            this.popMatrix();
+
+            this.pushMatrix();
+            this.translate(bale.pos[0], groundY + bale.pos[1] + 1.6, bale.pos[2]);
+            this.hayBaleArrow.display();
+            this.popMatrix();
+        }
 
         if (this.displayAxis) {
             this.axis.display();
@@ -483,20 +580,18 @@ export class MyScene extends CGFscene {
     displayMountainPanorama() {
         this.pushMatrix();
 
-        // Ensure it doesn't get affected by sky shader
+        // sky shader must not affect the panorama
         this.setActiveShader(this.defaultShader);
 
         this.gl.enable(this.gl.BLEND);
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
 
-        // 1. Far Layer (Back)
         this.pushMatrix();
         this.translate(0, this.terrainYOffset - 20, 0);
         this.mountainFarAppearance.apply();
         this.mountainFarPanorama.display();
         this.popMatrix();
 
-        // 2. Near Layer (Front)
         this.pushMatrix();
         this.translate(0, this.terrainYOffset - 10, 0);
         this.mountainAppearance.apply();

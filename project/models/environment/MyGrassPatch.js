@@ -1,21 +1,9 @@
 import { CGFobject } from "../../../lib/CGF.js";
 
 /**
- * Grass patch — a cluster of grass blades rendered as quads.
- *
- * Each blade is a thin quad (2 triangles) standing upright.
- * The vertex shader will animate the top vertices for wind.
- *
- * Dense and dead grass patches are controlled by the colour
- * uniform passed to the shader.
+ * Cluster of upright blade quads; the vertex shader animates the tops for wind.
  */
 export class MyGrassPatch extends CGFobject {
-    /**
-     * @param {CGFscene} scene
-     * @param {number}   bladeCount  Blades per patch
-     * @param {number}   patchRadius Radius of the patch
-     * @param {number}   seed        For unique blade placement
-     */
     constructor(scene, bladeCount = 40, patchRadius = 3.0, seed = 0) {
         super(scene);
         this.bladeCount = bladeCount;
@@ -40,53 +28,44 @@ export class MyGrassPatch extends CGFobject {
         let idx = 0;
 
         for (let i = 0; i < this.bladeCount; i++) {
-            // Random position within circular patch
             const angle = this._seededRandom(i * 6) * Math.PI * 2;
             const dist = Math.sqrt(this._seededRandom(i * 6 + 1)) * this.patchRadius;
             const bx = Math.cos(angle) * dist;
             const bz = Math.sin(angle) * dist;
 
-            // Random blade properties
             const height = 0.8 + this._seededRandom(i * 6 + 2) * 1.0;
             const width = 0.25 + this._seededRandom(i * 6 + 3) * 0.2;
             const rotY = this._seededRandom(i * 6 + 4) * Math.PI;
             const bendAmount = this._seededRandom(i * 6 + 5) * 0.6;
 
-            // Blade orientation
             const cosR = Math.cos(rotY);
             const sinR = Math.sin(rotY);
             const hw = width / 2;
 
-            // 3 vertices per blade: bottom-left, bottom-right, top-center
-            // Bottom vertices (y = 0, stay fixed)
+            // bottom corners stay anchored at y=0
             const blX = bx - hw * cosR;
             const blZ = bz - hw * sinR;
             const brX = bx + hw * cosR;
             const brZ = bz + hw * sinR;
 
-            // Top vertex (y = height, will be animated by wind shader)
-            // Slight bend in the blade direction
+            // top vertex gets a small lateral bend; wind shader animates it further
             const tX = bx + bendAmount * sinR;
             const tZ = bz - bendAmount * cosR;
 
-            // Bottom-left
             this.vertices.push(blX, 0, blZ);
             this.normals.push(-sinR, 0, cosR);
-            this.texCoords.push(0, 1); // v=1 means bottom (fixed)
+            this.texCoords.push(0, 1); // v=1 marks fixed bottom
 
-            // Bottom-right
             this.vertices.push(brX, 0, brZ);
             this.normals.push(-sinR, 0, cosR);
             this.texCoords.push(1, 1);
 
-            // Top-center
             this.vertices.push(tX, height, tZ);
             this.normals.push(-sinR, 0.3, cosR);
-            this.texCoords.push(0.5, 0); // v=0 means top (animated)
+            this.texCoords.push(0.5, 0); // v=0 marks animated top
 
-            // Two triangles per blade (front and back face)
+            // double-sided: emit both windings
             this.indices.push(idx, idx + 1, idx + 2);
-            // Back face
             this.indices.push(idx + 2, idx + 1, idx);
 
             idx += 3;

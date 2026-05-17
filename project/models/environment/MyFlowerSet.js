@@ -2,22 +2,9 @@ import { CGFappearance, CGFtexture } from "../../../lib/CGF.js";
 import { MyFlower } from "./MyFlower.js";
 
 /**
- * Procedural flower scatter system.
- *
- * Generates flowers across the terrain with randomised parameters:
- *  - Petal count, length, width
- *  - Stem height
- *  - Petal and centre colours
- *  - Position, rotation, scale
+ * Procedural flower scatter system with randomised shapes, colours and placement.
  */
 export class MyFlowerSet {
-    /**
-     * @param {CGFscene} scene
-     * @param {MyTerrain} terrain    Terrain for height queries
-     * @param {number}    count      Number of flowers
-     * @param {number}    areaRadius Scatter radius
-     * @param {number}    seed       Master seed
-     */
     constructor(scene, terrain, count = 50, areaRadius = 190, seed = 777) {
         this.scene = scene;
         this.terrain = terrain;
@@ -25,7 +12,6 @@ export class MyFlowerSet {
         this.areaRadius = areaRadius;
         this.seed = seed;
 
-        // Pre-defined petal colour palette (prairie wildflowers)
         this.petalPalette = [
             [1.0, 0.55, 0.70],   // pink
             [0.95, 0.90, 0.35],  // yellow
@@ -41,13 +27,11 @@ export class MyFlowerSet {
             [0.90, 0.90, 0.50],  // light yellow
         ];
 
-        // Generate unique flower shapes (reuse a few)
         this.flowerShapes = [];
         this.placements = [];
 
         this._generateFlowers();
 
-        // Appearances for petals and stems
         this.petalTexture = new CGFtexture(scene, "textures/environment/flora/petal.png");
 
         this.petalAppearance = new CGFappearance(scene);
@@ -75,7 +59,6 @@ export class MyFlowerSet {
     }
 
     _generateFlowers() {
-        // Create a pool of flower shapes
         const numShapes = 8;
         for (let i = 0; i < numShapes; i++) {
             const petalCount = 4 + Math.floor(this._seededRandom(i * 10) * 7); // 4–10
@@ -100,15 +83,35 @@ export class MyFlowerSet {
             });
         }
 
-        // Generate placements
-        for (let i = 0; i < this.count; i++) {
+        // avoid placing flowers inside rocks
+        const obstacles = [];
+        if (this.scene.rockSet) {
+            for (const r of this.scene.rockSet.placements) {
+                obstacles.push({
+                    x: r.x, z: r.z,
+                    r: Math.max(r.scaleX, r.scaleZ) * 1.1 + 0.3
+                });
+            }
+        }
+
+        // retry placements that overlap an obstacle
+        let attempts = 0;
+        const maxAttempts = this.count * 60;
+        while (this.placements.length < this.count && attempts < maxAttempts) {
+            const i = attempts;
+            attempts++;
+
             const angle = this._seededRandom(i * 4) * Math.PI * 2;
             const dist = Math.sqrt(this._seededRandom(i * 4 + 1)) * this.areaRadius * 0.85;
             const worldX = Math.cos(angle) * dist;
             const worldZ = Math.sin(angle) * dist;
-            const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
 
             const scale = 0.6 + this._seededRandom(i * 4 + 2) * 1.0;
+            const flowerRadius = scale * 0.5;
+
+            if (this._collidesWithObstacles(worldX, worldZ, flowerRadius, obstacles)) continue;
+
+            const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
             const rotY = this._seededRandom(i * 4 + 3) * Math.PI * 2;
             const shapeIdx = Math.floor(this._seededRandom(i * 13) * this.flowerShapes.length);
 
@@ -117,6 +120,16 @@ export class MyFlowerSet {
                 scale, rotY, shapeIdx
             });
         }
+    }
+
+    _collidesWithObstacles(x, z, padding, obstacles) {
+        for (const o of obstacles) {
+            const dx = x - o.x;
+            const dz = z - o.z;
+            const minDist = o.r + padding;
+            if (dx * dx + dz * dz < minDist * minDist) return true;
+        }
+        return false;
     }
 
     display() {
@@ -128,11 +141,8 @@ export class MyFlowerSet {
             this.scene.rotate(p.rotY, 0, 1, 0);
             this.scene.scale(p.scale, p.scale, p.scale);
 
-            // Apply stem colour
             this.stemAppearance.apply();
 
-            // Display the flower (stem + petals + centre drawn internally)
-            // We set petal/centre colours via appearance before each part
             this._displayFlowerWithColors(shape);
 
             this.scene.popMatrix();
@@ -143,18 +153,15 @@ export class MyFlowerSet {
         const scene = this.scene;
         const flower = shape.flower;
 
-        // Stem (green)
         this.stemAppearance.apply();
         scene.pushMatrix();
         flower.stemGeom.display();
         scene.popMatrix();
 
-        // Flower head
         scene.pushMatrix();
         scene.translate(0, flower.stemHeight, 0);
         scene.rotate(-Math.PI / 8, 1, 0, 0);
 
-        // Petals
         scene.gl.disable(scene.gl.CULL_FACE);
         this.petalAppearance.setAmbient(...shape.petalColor, 1);
         this.petalAppearance.setDiffuse(...shape.petalColor, 1);
@@ -170,7 +177,6 @@ export class MyFlowerSet {
         }
         scene.gl.enable(scene.gl.CULL_FACE);
 
-        // Centre
         this.centreAppearance.setAmbient(...shape.centreColor, 1);
         this.centreAppearance.setDiffuse(...shape.centreColor, 1);
         this.centreAppearance.apply();

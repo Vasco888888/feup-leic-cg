@@ -1,22 +1,10 @@
 import { CGFobject } from "../../../lib/CGF.js";
 
 /**
- * Procedurally-generated terrain mesh with rolling-hill elevation.
- *
- * A subdivided XZ grid whose vertex Y values come from multi-octave
- * value noise, producing subtle prairie hills.  Normals are computed
- * analytically via central differences so the lighting is smooth.
- *
- * Exposes getTerrainHeight(worldX, worldZ) for placing objects later.
+ * Subdivided XZ grid with fbm hills and analytic normals.
+ * Exposes getTerrainHeight(worldX, worldZ) for placing objects on the surface.
  */
 export class MyTerrain extends CGFobject {
-    /**
-     * @param {CGFscene} scene
-     * @param {number}   divisions  Grid resolution (e.g. 128)
-     * @param {number}   size       World-unit extent of the terrain
-     * @param {number}   maxHeight  Maximum hill elevation
-     * @param {number}   seed       Noise seed for reproducibility
-     */
     constructor(scene, divisions = 128, size = 400, maxHeight = 12, seed = 42) {
         super(scene);
 
@@ -25,23 +13,16 @@ export class MyTerrain extends CGFobject {
         this.maxHeight = maxHeight;
         this.seed = seed;
 
-        // Noise parameters
         this.octaves = 4;
         this.persistence = 0.45;
         this.lacunarity = 2.2;
-        this.baseFrequency = 2.0; // how "wide" the hills are
+        this.baseFrequency = 2.0; // controls how wide the hills are
 
-        // 2-D height cache (divisions+1) × (divisions+1)
         this.heightData = [];
 
         this.initBuffers();
     }
 
-    // ────────────────── Noise helpers ──────────────────
-
-    /**
-     * Simple deterministic hash  → pseudo-random in [0, 1).
-     */
     _hash(x, y) {
         let h = (x * 374761393 + y * 668265263 + this.seed) | 0;
         h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -49,16 +30,12 @@ export class MyTerrain extends CGFobject {
         return (h & 0x7fffffff) / 0x7fffffff;
     }
 
-    /**
-     * Smoothly interpolated 2-D value noise.
-     */
     _noise2D(x, y) {
         const ix = Math.floor(x);
         const iy = Math.floor(y);
         const fx = x - ix;
         const fy = y - iy;
 
-        // Smoothstep (Hermite)
         const sx = fx * fx * (3 - 2 * fx);
         const sy = fy * fy * (3 - 2 * fy);
 
@@ -73,10 +50,6 @@ export class MyTerrain extends CGFobject {
         return nx0 + (nx1 - nx0) * sy;
     }
 
-    /**
-     * Fractal Brownian Motion (multi-octave noise).
-     * Returns a value roughly in [0, 1].
-     */
     _fbm(x, y) {
         let value = 0;
         let amplitude = 1;
@@ -90,35 +63,23 @@ export class MyTerrain extends CGFobject {
             frequency *= this.lacunarity;
         }
 
-        return value / maxAmp; // normalise to ~[0,1]
+        return value / maxAmp;
     }
 
-    // ────────────────── Height queries ──────────────────
-
-    /**
-     * Normalised height at (u, v) ∈ [0, 1]².
-     * Multiplied by maxHeight to get world Y.
-     */
     _heightAtUV(u, v) {
         const h = this._fbm(u, v);
 
-        // Flatten the edges so terrain blends into the horizon.
         const edgeFade = this._edgeFade(u, v);
 
-        // Center heights around 0 so terrain has both hills and valleys.
+        // recenter around 0 so the noise yields both hills and valleys
         const centered = (h - 0.5) * 2.0;
 
-        // Keep strong interior relief, but gently lift the border ring so
-        // deep valleys do not create visible horizon gaps.
+        // gently lift the border ring so deep valleys don't punch through the horizon
         const interiorHeight = centered * this.maxHeight * edgeFade;
         const borderLift = (1.0 - edgeFade) * (this.maxHeight * 0.10);
         return interiorHeight + borderLift;
     }
 
-    /**
-     * Smooth fade-to-zero near the edges of the [0,1]² domain
-     * so the terrain doesn't have sharp cliffs at its border.
-     */
     _edgeFade(u, v) {
         const margin = 0.08;
         const fadeU = smoothstepJS(0, margin, u) * smoothstepJS(0, margin, 1 - u);
@@ -127,15 +88,12 @@ export class MyTerrain extends CGFobject {
     }
 
     /**
-     * Return the terrain height at an arbitrary world position (x, z).
-     * Uses bilinear interpolation between the four surrounding grid vertices.
+     * Bilinearly samples the cached height grid at an arbitrary (worldX, worldZ).
      */
     getTerrainHeight(worldX, worldZ) {
-        // World → UV
         const u = (worldX / this.size) + 0.5;
         const v = (worldZ / this.size) + 0.5;
 
-        // UV → grid indices (continuous)
         const gx = u * this.divisions;
         const gz = v * this.divisions;
 
@@ -145,7 +103,6 @@ export class MyTerrain extends CGFobject {
         const fx = gx - ix;
         const fz = gz - iz;
 
-        // Clamp to valid range
         const ix0 = Math.max(0, Math.min(ix, this.divisions));
         const ix1 = Math.max(0, Math.min(ix + 1, this.divisions));
         const iz0 = Math.max(0, Math.min(iz, this.divisions));
@@ -157,17 +114,14 @@ export class MyTerrain extends CGFobject {
         const h01 = this.heightData[iz1 * n + ix0];
         const h11 = this.heightData[iz1 * n + ix1];
 
-        // Bilinear interpolation
         const hx0 = h00 + (h10 - h00) * fx;
         const hx1 = h01 + (h11 - h01) * fx;
 
         return hx0 + (hx1 - hx0) * fz;
     }
 
-    // ────────────────── Mesh construction ──────────────────
-
     initBuffers() {
-        const n = this.divisions + 1; // vertices per row
+        const n = this.divisions + 1;
         const step = this.size / this.divisions;
         const halfSize = this.size / 2;
 
@@ -176,7 +130,6 @@ export class MyTerrain extends CGFobject {
         this.texCoords = [];
         this.indices = [];
 
-        // ─── 1. Compute heights & store vertices ───
         this.heightData = new Float32Array(n * n);
 
         for (let iz = 0; iz < n; iz++) {
@@ -193,13 +146,13 @@ export class MyTerrain extends CGFobject {
                 this.vertices.push(worldX, worldY, worldZ);
                 this.texCoords.push(u, v);
 
-                // Placeholder normal – computed next
+                // placeholder, overwritten in the normals pass below
                 this.normals.push(0, 1, 0);
             }
         }
 
-        // ─── 2. Compute normals via central differences ───
-        const eps = 1.0 / this.divisions; // UV step
+        // central differences for smooth analytic normals
+        const eps = 1.0 / this.divisions;
         for (let iz = 0; iz < n; iz++) {
             for (let ix = 0; ix < n; ix++) {
                 const u = ix / this.divisions;
@@ -210,18 +163,14 @@ export class MyTerrain extends CGFobject {
                 const hD = this._heightAtUV(u, Math.max(v - eps, 0));
                 const hU = this._heightAtUV(u, Math.min(v + eps, 1));
 
-                // Tangent vectors in world space
-                const dx = 2 * step; // world distance for 2 * eps
+                const dx = 2 * step;
                 const dz = 2 * step;
 
-                // Normal = cross(tangentX, tangentZ)
-                // tangentX = (dx, hR - hL, 0)
-                // tangentZ = (0,  hU - hD, dz)
+                // n = cross((dx, hR-hL, 0), (0, hU-hD, dz))
                 let nx = -(hR - hL) * dz;
                 let ny = dx * dz;
                 let nz = -(hU - hD) * dx;
 
-                // Normalise
                 const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
                 nx /= len;
                 ny /= len;
@@ -234,7 +183,6 @@ export class MyTerrain extends CGFobject {
             }
         }
 
-        // ─── 3. Build triangle indices ───
         for (let iz = 0; iz < this.divisions; iz++) {
             for (let ix = 0; ix < this.divisions; ix++) {
                 const topLeft = iz * n + ix;
@@ -242,7 +190,6 @@ export class MyTerrain extends CGFobject {
                 const bottomLeft = topLeft + n;
                 const bottomRight = bottomLeft + 1;
 
-                // Two triangles per quad
                 this.indices.push(topLeft, bottomLeft, topRight);
                 this.indices.push(topRight, bottomLeft, bottomRight);
             }
@@ -261,11 +208,7 @@ export class MyTerrain extends CGFobject {
     }
 }
 
-// ─── Utility ───
-
-/**
- * GLSL-style smoothstep for use in JS.
- */
+// GLSL-style smoothstep
 function smoothstepJS(edge0, edge1, x) {
     const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
     return t * t * (3 - 2 * t);

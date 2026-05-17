@@ -1,17 +1,15 @@
 import { CGFobject, CGFappearance, CGFtexture } from '../../../../lib/CGF.js';
 
 /**
- * MyLamp
- * A simple lantern model with a base, glass, and top.
+ * Lantern made of a metal frame around an emissive glass cylinder.
  */
 export class MyLamp extends CGFobject {
     constructor(scene) {
         super(scene);
-        
+
         this.metalPart = new MyLampMetal(scene);
         this.glassPart = new MyLampGlass(scene);
 
-        // Iron Material
         this.ironMaterial = new CGFappearance(scene);
         this.ironMaterial.setAmbient(0.3, 0.3, 0.3, 1.0);
         this.ironMaterial.setDiffuse(0.6, 0.6, 0.6, 1.0);
@@ -20,7 +18,7 @@ export class MyLamp extends CGFobject {
         this.ironTexture = new CGFtexture(scene, "textures/props/wagon/worn_iron_wheel.jpg");
         this.ironMaterial.setTexture(this.ironTexture);
 
-        // Glass Material (Emissive)
+        // emissive glass so the lantern glows even with no scene lights
         this.glassMaterial = new CGFappearance(scene);
         this.glassMaterial.setAmbient(1.0, 0.8, 0.4, 1.0);
         this.glassMaterial.setDiffuse(1.0, 0.8, 0.4, 1.0);
@@ -67,9 +65,8 @@ class MyLampMetal extends CGFobject {
             }
             for (let i = 0; i < slices; i++) {
                 let b = startIdx + i * 2;
-                // Outside
+                // double-sided wall
                 this.indices.push(b, b + 1, b + 3, b, b + 3, b + 2);
-                // Inside
                 this.indices.push(b, b + 3, b + 1, b, b + 2, b + 3);
             }
         };
@@ -87,18 +84,17 @@ class MyLampMetal extends CGFobject {
                 this.texCoords.push(0.5 + 0.5 * Math.cos(i * angle), 0.5 + 0.5 * Math.sin(i * angle));
             }
             for (let i = 0; i < slices; i++) {
-                // Front side
+                // both winding orders for a double-sided disk
                 this.indices.push(startIdx, startIdx + i + 1, startIdx + i + 2);
-                // Back side
                 this.indices.push(startIdx, startIdx + i + 2, startIdx + i + 1);
             }
         };
 
-        // Base
+        // base cap
         addCylinder(0.15, 0.1, 0);
         addDisk(0.15, 0, -1);
         addDisk(0.15, 0.1, 1);
-        // Top
+        // top cap
         addCylinder(0.16, 0.05, 0.4);
         addDisk(0.16, 0.4, -1);
         addDisk(0.16, 0.45, 1);
@@ -135,9 +131,8 @@ class MyLampGlass extends CGFobject {
         }
         for (let i = 0; i < slices; i++) {
             let b = i * 2;
-            // Outside
+            // double-sided wall
             this.indices.push(b, b + 1, b + 3, b, b + 3, b + 2);
-            // Inside
             this.indices.push(b, b + 3, b + 1, b, b + 2, b + 3);
         }
 
