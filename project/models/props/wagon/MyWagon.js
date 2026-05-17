@@ -56,6 +56,9 @@ export class MyWagon extends CGFobject {
         // accumulated rolling angles (radians)
         this.frontSpin = 0;
         this.rearSpin = 0;
+
+        // hay-bale carrying slot
+        this.carriedBale = null;
     }
 
     update(dtSeconds) {
@@ -108,6 +111,30 @@ export class MyWagon extends CGFobject {
         // wheel rolling — front wheels are smaller so they spin faster
         this.frontSpin += dist / FRONT_WHEEL_RADIUS_WORLD;
         this.rearSpin += dist / REAR_WHEEL_RADIUS_WORLD;
+    }
+
+    pickup(bale) {
+        if (this.carriedBale) return false;
+        this.carriedBale = bale;
+        return true;
+    }
+
+    dropPosition() {
+        // drop just behind the wagon so it doesn't collide with the rear wheels
+        const dropLocalX = REAR_WHEEL_OFFSET_X * WAGON_SCALE - 1.5;
+        const cos = Math.cos(this.heading);
+        const sin = Math.sin(this.heading);
+        return [
+            this.position[0] + dropLocalX * cos,
+            this.position[1],
+            this.position[2] - dropLocalX * sin
+        ];
+    }
+
+    releaseBale() {
+        const bale = this.carriedBale;
+        this.carriedBale = null;
+        return bale;
     }
 
     display() {
@@ -191,6 +218,14 @@ export class MyWagon extends CGFobject {
         this.scene.translate(1.3, 1.1, -0.75);
         this.lamp.display();
         this.scene.popMatrix();
+
+        // carried hay bale rides on top of the bed
+        if (this.carriedBale) {
+            this.scene.pushMatrix();
+            this.scene.translate(0, 1.4, 0);
+            this.carriedBale.display();
+            this.scene.popMatrix();
+        }
 
         this.scene.popMatrix();
     }

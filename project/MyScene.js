@@ -41,6 +41,16 @@ export class MyScene extends CGFscene {
 
         // wagon physics needs a real dt between frames
         this.lastUpdateTime = null;
+
+        // hay bale state — ground position, carry flag, and key edge-trigger memory
+        this.balePos = [5, 0.9, 5];
+        this.baleHeld = false;
+        // reach point sits ahead of the wagon centre (near the horse), with a
+        // generous radius so the bale only needs to be in front of the rig
+        this.pickupReachOffset = 5.0;
+        this.balePickupRadius = 4.5;
+        this.prevPickupKey = false;
+        this.prevDropKey = false;
     }
 
     init(application) {
@@ -326,7 +336,41 @@ export class MyScene extends CGFscene {
 
         if (this.wagon && dt > 0) {
             this.wagon.update(dt);
+            this.handleHayBaleKeys();
         }
+    }
+
+    handleHayBaleKeys() {
+        if (!this.gui) return;
+        const pickupKey = this.gui.isKeyPressed("KeyP");
+        const dropKey = this.gui.isKeyPressed("KeyL");
+
+        // edge-trigger so one tap = one action
+        if (pickupKey && !this.prevPickupKey && !this.baleHeld) {
+            // pickup zone centred ahead of the wagon so the horse blocking the body
+            // doesn't make the bale unreachable
+            const reachX = this.wagon.position[0] + this.pickupReachOffset * Math.cos(this.wagon.heading);
+            const reachZ = this.wagon.position[2] - this.pickupReachOffset * Math.sin(this.wagon.heading);
+            const dx = reachX - this.balePos[0];
+            const dz = reachZ - this.balePos[2];
+            if (dx * dx + dz * dz <= this.balePickupRadius * this.balePickupRadius) {
+                if (this.wagon.pickup(this.hayBale)) {
+                    this.baleHeld = true;
+                }
+            }
+        }
+
+        if (dropKey && !this.prevDropKey && this.baleHeld) {
+            const dropPos = this.wagon.dropPosition();
+            this.wagon.releaseBale();
+            this.balePos[0] = dropPos[0];
+            this.balePos[1] = 0.9; // resting height above terrainYOffset
+            this.balePos[2] = dropPos[2];
+            this.baleHeld = false;
+        }
+
+        this.prevPickupKey = pickupKey;
+        this.prevDropKey = dropKey;
     }
 
     updateLightStates() {
@@ -477,11 +521,13 @@ export class MyScene extends CGFscene {
         this.barn.display();
         this.popMatrix();
 
-        this.pushMatrix();
-        this.translate(5, this.terrainYOffset + 0.9, 5);
-        this.scale(2.0, 2.0, 2.0);
-        this.hayBale.display();
-        this.popMatrix();
+        if (!this.baleHeld) {
+            this.pushMatrix();
+            this.translate(this.balePos[0], this.terrainYOffset + this.balePos[1], this.balePos[2]);
+            this.scale(2.0, 2.0, 2.0);
+            this.hayBale.display();
+            this.popMatrix();
+        }
 
         if (this.displayAxis) {
             this.axis.display();
