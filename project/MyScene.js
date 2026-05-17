@@ -3,6 +3,7 @@ import { MySkyDome } from "./models/environment/MySkyDome.js";
 import { MyPlane } from "./models/primitives/MyPlane.js";
 import { MyWagon } from "./models/props/wagon/MyWagon.js";
 import { MyHayBale } from "./models/props/hay-bale/MyHayBale.js";
+import { MyHayBaleArrow } from "./models/props/hay-bale/MyHayBaleArrow.js";
 import { MyBarn } from "./models/props/barn/MyBarn.js";
 import { MyTerrain } from "./models/environment/MyTerrain.js";
 import { MyRockSet } from "./models/environment/MyRockSet.js";
@@ -72,6 +73,7 @@ export class MyScene extends CGFscene {
         this.floor = new MyPlane(this, 20);
         this.wagon = new MyWagon(this);
         this.hayBale = new MyHayBale(this);
+        this.hayBaleArrow = new MyHayBaleArrow(this);
         this.barn = new MyBarn(this);
         this.barnPos = { x: -20, z: -20 };
         this.terrain = new MyTerrain(this, 128, 520, 10, 42);
@@ -308,6 +310,7 @@ export class MyScene extends CGFscene {
             if (dt > 0.1) dt = 0.1;
         }
         this.lastUpdateTime = t;
+        this.currentTime = t;
 
         if (!this.pauseDayCycle) {
             this.dayTime = (t / 1000.0) * this.dayCycleSpeed;
@@ -547,6 +550,15 @@ export class MyScene extends CGFscene {
             this.translate(this.balePos[0], groundY + this.balePos[1], this.balePos[2]);
             this.scale(2.0, 2.0, 2.0);
             this.hayBale.display();
+            this.popMatrix();
+
+            // floating arrow over the bale
+            const tSec = (this.currentTime || 0) / 1000.0;
+            const spin = tSec * 1.0;
+            this.pushMatrix();
+            this.translate(this.balePos[0], groundY + this.balePos[1] + 1.6, this.balePos[2]);
+            this.rotate(spin, 0, 1, 0);
+            this.hayBaleArrow.display();
             this.popMatrix();
         }
 
