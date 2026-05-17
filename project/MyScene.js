@@ -3,6 +3,7 @@ import { MySkyDome } from "./models/environment/MySkyDome.js";
 import { MyPlane } from "./models/primitives/MyPlane.js";
 import { MyWagon } from "./models/props/wagon/MyWagon.js";
 import { MyHayBale } from "./models/props/hay-bale/MyHayBale.js";
+import { MyHayBaleArrow } from "./models/props/hay-bale/MyHayBaleArrow.js";
 import { MyBarn } from "./models/props/barn/MyBarn.js";
 import { MyTerrain } from "./models/environment/MyTerrain.js";
 import { MyRockSet } from "./models/environment/MyRockSet.js";
@@ -38,6 +39,22 @@ export class MyScene extends CGFscene {
         this.sunInfluence = 1.0;
         this.moonInfluence = 0.0;
         this.pauseDayCycle = true;
+
+        // wagon physics needs a real dt between frames
+        this.lastUpdateTime = null;
+
+        // hay bales scattered around the field; each tracks its own held state
+        this.bales = [
+            { pos: [5, 0.9, 5], held: false },
+            { pos: [14, 0.9, -8], held: false },
+            { pos: [-9, 0.9, 13], held: false }
+        ];
+        // reach point sits ahead of the wagon centre (near the horse), with a
+        // generous radius so the bale only needs to be in front of the rig
+        this.pickupReachOffset = 5.0;
+        this.balePickupRadius = 4.5;
+        this.prevPickupKey = false;
+        this.prevDropKey = false;
     }
 
     init(application) {
@@ -59,6 +76,7 @@ export class MyScene extends CGFscene {
         this.floor = new MyPlane(this, 20);
         this.wagon = new MyWagon(this);
         this.hayBale = new MyHayBale(this);
+        this.hayBaleArrow = new MyHayBaleArrow(this);
         this.barn = new MyBarn(this);
         this.barnPos = { x: -20, z: -20 };
         this.terrain = new MyTerrain(this, 128, 520, 10, 42);
@@ -287,6 +305,16 @@ export class MyScene extends CGFscene {
     }
 
     update(t) {
+        // dt in seconds, clamped so a tab-switch pause doesn't teleport the wagon
+        let dt = 0;
+        if (this.lastUpdateTime !== null) {
+            dt = (t - this.lastUpdateTime) / 1000.0;
+            if (dt < 0) dt = 0;
+            if (dt > 0.1) dt = 0.1;
+        }
+        this.lastUpdateTime = t;
+        this.currentTime = t;
+
         if (!this.pauseDayCycle) {
             this.dayTime = (t / 1000.0) * this.dayCycleSpeed;
         }
@@ -311,6 +339,73 @@ export class MyScene extends CGFscene {
         this.applyDynamicLighting();
 
         this.grassSet.update(t, this.sunInfluence);
+
+        if (this.wagon && dt > 0) {
+            this.wagon.update(dt, this.getColliders());
+            // wheels need to ride on the terrain, not the abstract plane at Y=0
+            this.wagon.position[1] = this.terrain.getTerrainHeight(
+                this.wagon.position[0],
+                this.wagon.position[2]
+            );
+            this.handleHayBaleKeys();
+        }
+    }
+
+    getColliders() {
+        const colliders = this.rockSet ? this.rockSet.getColliders() : [];
+
+        // barn footprint: 10x10 square, treated as a tight circle
+        colliders.push({ x: this.barnPos.x, z: this.barnPos.z, radius: 6.5 });
+
+        // every grounded hay bale is a soft collider so the horse can muzzle
+        // up to it, but the wagon bed still bumps into it
+        for (const bale of this.bales) {
+            if (!bale.held) {
+                colliders.push({ x: bale.pos[0], z: bale.pos[2], radius: 1.5, soft: true });
+            }
+        }
+
+        return colliders;
+    }
+
+    handleHayBaleKeys() {
+        if (!this.gui) return;
+        const pickupKey = this.gui.isKeyPressed("KeyP");
+        const dropKey = this.gui.isKeyPressed("KeyL");
+
+        // pickup: find the nearest grounded bale inside the reach circle
+        if (pickupKey && !this.prevPickupKey && !this.wagon.isFull()) {
+            const reachX = this.wagon.position[0] + this.pickupReachOffset * Math.cos(this.wagon.heading);
+            const reachZ = this.wagon.position[2] - this.pickupReachOffset * Math.sin(this.wagon.heading);
+            const r2 = this.balePickupRadius * this.balePickupRadius;
+            let best = null;
+            let bestDist = Infinity;
+            for (const bale of this.bales) {
+                if (bale.held) continue;
+                const dx = reachX - bale.pos[0];
+                const dz = reachZ - bale.pos[2];
+                const d2 = dx * dx + dz * dz;
+                if (d2 <= r2 && d2 < bestDist) {
+                    best = bale;
+                    bestDist = d2;
+                }
+            }
+            if (best) this.wagon.pickup(best);
+        }
+
+        // drop the most recently picked-up bale at the rear of the wagon
+        if (dropKey && !this.prevDropKey && this.wagon.carriedBales.length > 0) {
+            const dropPos = this.wagon.dropPosition();
+            const released = this.wagon.releaseBale();
+            if (released) {
+                released.pos[0] = dropPos[0];
+                released.pos[1] = 0.9;
+                released.pos[2] = dropPos[2];
+            }
+        }
+
+        this.prevPickupKey = pickupKey;
+        this.prevDropKey = dropKey;
     }
 
     updateLightStates() {
@@ -453,7 +548,6 @@ export class MyScene extends CGFscene {
 
         this.pushMatrix();
         this.translate(0, this.terrainYOffset, 0);
-        this.scale(2.0, 2.0, 2.0);
         this.wagon.display();
         this.popMatrix();
 
@@ -462,11 +556,21 @@ export class MyScene extends CGFscene {
         this.barn.display();
         this.popMatrix();
 
-        this.pushMatrix();
-        this.translate(5, this.terrainYOffset + 0.9, 5);
-        this.scale(2.0, 2.0, 2.0);
-        this.hayBale.display();
-        this.popMatrix();
+        // draw every grounded bale and its pinpointing arrow
+        for (const bale of this.bales) {
+            if (bale.held) continue;
+            const groundY = this.terrain.getTerrainHeight(bale.pos[0], bale.pos[2]);
+            this.pushMatrix();
+            this.translate(bale.pos[0], groundY + bale.pos[1], bale.pos[2]);
+            this.scale(2.0, 2.0, 2.0);
+            this.hayBale.display();
+            this.popMatrix();
+
+            this.pushMatrix();
+            this.translate(bale.pos[0], groundY + bale.pos[1] + 1.6, bale.pos[2]);
+            this.hayBaleArrow.display();
+            this.popMatrix();
+        }
 
         if (this.displayAxis) {
             this.axis.display();

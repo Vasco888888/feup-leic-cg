@@ -30,6 +30,28 @@ export class MyInterface extends CGFinterface {
         lightFolder.add(this.scene, "spotLightEnabled").name("Spotlight");
         lightFolder.add(this.scene, "pauseDayCycle").name("Pause Cycle");
 
+        this.initKeys();
+
         return true;
+    }
+
+    initKeys() {
+        // scene reads input via scene.gui.isKeyPressed(...)
+        this.scene.gui = this;
+        // suppress CGFinterface's built-in WASD camera handling
+        this.processKeyboard = function () {};
+        this.activeKeys = {};
+    }
+
+    processKeyDown(event) {
+        this.activeKeys[event.code] = true;
+    }
+
+    processKeyUp(event) {
+        this.activeKeys[event.code] = false;
+    }
+
+    isKeyPressed(keyCode) {
+        return this.activeKeys[keyCode] || false;
     }
 }
