@@ -76,6 +76,18 @@ export class MyRockSet {
         return placements;
     }
 
+    getColliders() {
+        // approximate each rock as a circle in the XZ plane for wagon collision
+        const colliders = [];
+        for (const r of this.placements) {
+            const radius = Math.max(r.scaleX, r.scaleZ) * 0.7;
+            if (radius > 0.3) {
+                colliders.push({ x: r.x, z: r.z, radius });
+            }
+        }
+        return colliders;
+    }
+
     display() {
         // vertex perturbation can flip winding, so culling stays off
         this.scene.gl.disable(this.scene.gl.CULL_FACE);

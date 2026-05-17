@@ -335,9 +335,23 @@ export class MyScene extends CGFscene {
         this.grassSet.update(t, this.sunInfluence);
 
         if (this.wagon && dt > 0) {
-            this.wagon.update(dt);
+            this.wagon.update(dt, this.getColliders());
             this.handleHayBaleKeys();
         }
+    }
+
+    getColliders() {
+        const colliders = this.rockSet ? this.rockSet.getColliders() : [];
+
+        // barn footprint: 10x10 square, treated as a tight circle
+        colliders.push({ x: this.barnPos.x, z: this.barnPos.z, radius: 6.5 });
+
+        // hay bale on the ground (skipped when carried so the wagon can drive over the slot)
+        if (!this.baleHeld) {
+            colliders.push({ x: this.balePos[0], z: this.balePos[2], radius: 1.5 });
+        }
+
+        return colliders;
     }
 
     handleHayBaleKeys() {

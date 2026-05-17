@@ -27,6 +27,17 @@ const STEERING_RATE = Math.PI * 1.2;
 const STEERING_RETURN_RATE = Math.PI * 1.6;
 const WHEELBASE_WORLD = (FRONT_WHEEL_OFFSET_X - REAR_WHEEL_OFFSET_X) * WAGON_SCALE;
 
+// collision footprint: rear + front of bed are fixed in the wagon's frame,
+// but the horse pivots around the kingpin so its point is recomputed each frame.
+// All offsets are in world units (post-WAGON_SCALE).
+const REAR_COLLISION = { localX: -2.0, localZ: 0, radius: 2.0 };
+const FRONT_COLLISION = { localX:  2.0, localZ: 0, radius: 2.2 };
+const HORSE_RADIUS = 1.8;
+const KINGPIN_WORLD_X = FRONT_WHEEL_OFFSET_X * WAGON_SCALE;
+const HORSE_FROM_KINGPIN = 2.0 * WAGON_SCALE;
+// stay clear of the terrain edge
+const WORLD_RADIUS = 240;
+
 export class MyWagon extends CGFobject {
     constructor(scene) {
         super(scene);
@@ -61,7 +72,7 @@ export class MyWagon extends CGFobject {
         this.carriedBale = null;
     }
 
-    update(dtSeconds) {
+    update(dtSeconds, colliders = []) {
         const gui = this.scene.gui;
         if (!gui) return;
 
@@ -105,8 +116,60 @@ export class MyWagon extends CGFobject {
             this.heading += (this.speed / WHEELBASE_WORLD) * Math.tan(this.steering) * dtSeconds;
         }
         // local +X is the wagon's forward; rotation by heading around +Y maps it to (cos, 0, -sin)
-        this.position[0] += dist * Math.cos(this.heading);
-        this.position[2] += -dist * Math.sin(this.heading);
+        let newX = this.position[0] + dist * Math.cos(this.heading);
+        let newZ = this.position[2] + -dist * Math.sin(this.heading);
+
+        // resolve obstacle penetration: every collision point along the rig is tested,
+        // and overlaps push the wagon centre back out along the contact normal
+        let hit = false;
+        const cosH = Math.cos(this.heading);
+        const sinH = Math.sin(this.heading);
+        const cosS = Math.cos(this.steering);
+        const sinS = Math.sin(this.steering);
+        const points = [
+            REAR_COLLISION,
+            FRONT_COLLISION,
+            // horse pivots around the kingpin with the steering angle
+            {
+                localX: KINGPIN_WORLD_X + HORSE_FROM_KINGPIN * cosS,
+                localZ: -HORSE_FROM_KINGPIN * sinS,
+                radius: HORSE_RADIUS
+            }
+        ];
+        for (const cp of points) {
+            // wagon-local (lx, lz) → world: heading rotation around +Y
+            const pointX = newX + cp.localX * cosH + cp.localZ * sinH;
+            const pointZ = newZ - cp.localX * sinH + cp.localZ * cosH;
+            for (const c of colliders) {
+                const dx = pointX - c.x;
+                const dz = pointZ - c.z;
+                const minDist = c.radius + cp.radius;
+                const distSq = dx * dx + dz * dz;
+                if (distSq < minDist * minDist) {
+                    const d = Math.sqrt(distSq) || 0.0001;
+                    const push = minDist - d;
+                    // applying push to the wagon centre instead of just the contact point
+                    // keeps the rig rigid; the next frame re-evaluates all points
+                    newX += (dx / d) * push;
+                    newZ += (dz / d) * push;
+                    hit = true;
+                }
+            }
+        }
+
+        // keep the wagon inside the playable terrain disc
+        const radial = Math.sqrt(newX * newX + newZ * newZ);
+        if (radial > WORLD_RADIUS) {
+            newX *= WORLD_RADIUS / radial;
+            newZ *= WORLD_RADIUS / radial;
+            hit = true;
+        }
+
+        this.position[0] = newX;
+        this.position[2] = newZ;
+
+        // running into something bleeds off momentum so we don't grind against the wall
+        if (hit) this.speed *= 0.2;
 
         // wheel rolling — front wheels are smaller so they spin faster
         this.frontSpin += dist / FRONT_WHEEL_RADIUS_WORLD;
