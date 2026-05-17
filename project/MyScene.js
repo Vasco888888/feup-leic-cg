@@ -51,6 +51,8 @@ export class MyScene extends CGFscene {
         this.balePickupRadius = 4.5;
         this.prevPickupKey = false;
         this.prevDropKey = false;
+        // arrows only float above bales the wagon is close to, so finding them feels earned
+        this.baleArrowRange = 55.0;
 
         // fixed-angle follow camera (world-space offsets, no heading rotation)
         this.cameraFollow = true;
@@ -759,9 +761,17 @@ export class MyScene extends CGFscene {
         this.barn.display();
         this.popMatrix();
 
-        // draw every grounded bale and its pinpointing arrow
+        // bales: cull distant ones so we don't pay for unseen geometry
+        const camX = this.camera ? this.camera.position[0] : 0;
+        const camZ = this.camera ? this.camera.position[2] : 0;
+        const baleCullDistSq = 160 * 160;
+        const arrowRangeSq = this.baleArrowRange * this.baleArrowRange;
+
         for (const bale of this.bales) {
             if (bale.held) continue;
+            const cdx = bale.pos[0] - camX;
+            const cdz = bale.pos[2] - camZ;
+            if (cdx * cdx + cdz * cdz > baleCullDistSq) continue;
             const groundY = this.terrain.getTerrainHeight(bale.pos[0], bale.pos[2]);
             this.pushMatrix();
             // bale geometry is centred (half-y 0.25 * scale 1.5 = 0.375), so lift
@@ -770,12 +780,22 @@ export class MyScene extends CGFscene {
             this.scale(1.5, 1.5, 1.5);
             this.hayBale.display();
             this.popMatrix();
+        }
 
+        // batch the arrows under one shader bind so we don't switch per bale
+        this.hayBaleArrow.beginBatch();
+        for (const bale of this.bales) {
+            if (bale.held) continue;
+            const dx = bale.pos[0] - this.wagon.position[0];
+            const dz = bale.pos[2] - this.wagon.position[2];
+            if (dx * dx + dz * dz >= arrowRangeSq) continue;
+            const groundY = this.terrain.getTerrainHeight(bale.pos[0], bale.pos[2]);
             this.pushMatrix();
             this.translate(bale.pos[0], groundY + 0.75 + 1.4, bale.pos[2]);
-            this.hayBaleArrow.display();
+            this.hayBaleArrow.drawInstance();
             this.popMatrix();
         }
+        this.hayBaleArrow.endBatch();
 
         if (this.displayAxis) {
             this.axis.display();

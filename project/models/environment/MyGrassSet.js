@@ -153,7 +153,30 @@ export class MyGrassSet {
             uIsDead: 0
         });
 
+        // render grass in front of the camera up to a long distance, skip everything
+        // behind us; gives the field depth without paying for unseen patches
+        const cam = scene.camera;
+        const camX = cam ? cam.position[0] : 0;
+        const camZ = cam ? cam.position[2] : 0;
+        let fX = 0;
+        let fZ = -1;
+        if (cam) {
+            fX = cam.target[0] - cam.position[0];
+            fZ = cam.target[2] - cam.position[2];
+            const fLen = Math.hypot(fX, fZ);
+            if (fLen > 1e-3) { fX /= fLen; fZ /= fLen; }
+        }
+        const renderDist = 95;
+        const renderDistSq = renderDist * renderDist;
+        // slight tolerance so patches just behind the camera (peripheral vision) still show
+        const behindThreshold = -0.2;
+
         for (const p of this.densePlacements) {
+            const dx = p.x - camX;
+            const dz = p.z - camZ;
+            const distSq = dx * dx + dz * dz;
+            if (distSq > renderDistSq) continue;
+            if (distSq > 25 && (dx * fX + dz * fZ) / Math.sqrt(distSq) < behindThreshold) continue;
             scene.pushMatrix();
             scene.translate(p.x, p.y, p.z);
             scene.rotate(p.rotY, 0, 1, 0);
@@ -176,6 +199,11 @@ export class MyGrassSet {
         });
 
         for (const p of this.deadPlacements) {
+            const dx = p.x - camX;
+            const dz = p.z - camZ;
+            const distSq = dx * dx + dz * dz;
+            if (distSq > renderDistSq) continue;
+            if (distSq > 25 && (dx * fX + dz * fZ) / Math.sqrt(distSq) < behindThreshold) continue;
             scene.pushMatrix();
             scene.translate(p.x, p.y, p.z);
             scene.rotate(p.rotY, 0, 1, 0);

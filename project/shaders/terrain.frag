@@ -54,7 +54,7 @@ float noise(vec2 p) {
 float fbm(vec2 p) {
     float value = 0.0;
     float amplitude = 0.5;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 3; i++) {
         value += amplitude * noise(p);
         p *= 2.0;
         amplitude *= 0.5;
@@ -102,12 +102,9 @@ void main() {
 
     vec4 grassColor  = texture2D(uGrassTexture,  tiledUV);
     vec4 dirtColor   = texture2D(uDirtTexture,   tiledUV);
-    vec4 flowerColor = texture2D(uFlowerTexture,  tiledUV);
 
-    // tone the ground grass down so the 3D blades pop against it;
-    // the flower texture sits on grass too, so match its brightness
-    grassColor.rgb  *= 0.72;
-    flowerColor.rgb *= 0.72;
+    // tone the ground grass down so the 3D blades pop against it
+    grassColor.rgb *= 0.72;
 
     float slope = 1.0 - dot(normalize(vNormal), vec3(0.0, 1.0, 0.0));
     float slopeDirt = smoothstep(0.25, 0.55, slope);
@@ -116,16 +113,7 @@ void main() {
     float pathGrass = pathMask(vWorldPos.xz);
     float dirtFactor = max(slopeDirt, 1.0 - pathGrass);
 
-    // two fbm layers at different scales produce cluster spots
-    float flowerNoise = fbm(vWorldPos.xz * 0.05 + vec2(7.3, 2.1));
-    float flowerNoise2 = fbm(vWorldPos.xz * 0.12 + vec2(13.7, 5.9));
-    float flowerMask = smoothstep(0.42, 0.58, flowerNoise) * smoothstep(0.38, 0.55, flowerNoise2);
-    // restrict flowers to flat grass, away from dirt and path
-    float slopeFlat = 1.0 - smoothstep(0.08, 0.25, slope);
-    flowerMask *= slopeFlat * pathGrass * (1.0 - dirtFactor);
-
-    vec4 groundColor = mix(grassColor, flowerColor, clamp(flowerMask, 0.0, 1.0));
-    groundColor = mix(groundColor, dirtColor, clamp(dirtFactor, 0.0, 1.0));
+    vec4 groundColor = mix(grassColor, dirtColor, clamp(dirtFactor, 0.0, 1.0));
 
     vec3 edgeColor = vec3(0.28, 0.42, 0.18);
     groundColor.rgb = mix(edgeColor, groundColor.rgb, edgeFade);
