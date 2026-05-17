@@ -681,7 +681,8 @@ export class MyScene extends CGFscene {
             uFogColor: hazeColor,
             uFogStrength: 0.55,
             uPanoramaHeight: this.mountainFarPanorama.height,
-            uSunInfluence: this.sunInfluence
+            uSunInfluence: this.sunInfluence,
+            uSunDir: this.sunDirection
         });
         this.mountainFarPanorama.display();
         this.popMatrix();
@@ -696,7 +697,8 @@ export class MyScene extends CGFscene {
             uFogColor: hazeColor,
             uFogStrength: 0.22,
             uPanoramaHeight: this.mountainPanorama.height,
-            uSunInfluence: this.sunInfluence
+            uSunInfluence: this.sunInfluence,
+            uSunDir: this.sunDirection
         });
         this.mountainPanorama.display();
         this.popMatrix();
