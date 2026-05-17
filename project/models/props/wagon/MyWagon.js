@@ -133,7 +133,8 @@ export class MyWagon extends CGFobject {
             {
                 localX: KINGPIN_WORLD_X + HORSE_FROM_KINGPIN * cosS,
                 localZ: -HORSE_FROM_KINGPIN * sinS,
-                radius: HORSE_RADIUS
+                radius: HORSE_RADIUS,
+                ignoreSoft: true
             }
         ];
         for (const cp of points) {
@@ -141,6 +142,7 @@ export class MyWagon extends CGFobject {
             const pointX = newX + cp.localX * cosH + cp.localZ * sinH;
             const pointZ = newZ - cp.localX * sinH + cp.localZ * cosH;
             for (const c of colliders) {
+                if (cp.ignoreSoft && c.soft) continue;
                 const dx = pointX - c.x;
                 const dz = pointZ - c.z;
                 const minDist = c.radius + cp.radius;

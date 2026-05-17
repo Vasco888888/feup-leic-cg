@@ -354,9 +354,10 @@ export class MyScene extends CGFscene {
         // barn footprint: 10x10 square, treated as a tight circle
         colliders.push({ x: this.barnPos.x, z: this.barnPos.z, radius: 6.5 });
 
-        // hay bale on the ground (skipped when carried so the wagon can drive over the slot)
+        // hay bale on the ground — soft so the horse can muzzle right up to it,
+        // but the wagon bed still bumps into it
         if (!this.baleHeld) {
-            colliders.push({ x: this.balePos[0], z: this.balePos[2], radius: 1.5 });
+            colliders.push({ x: this.balePos[0], z: this.balePos[2], radius: 1.5, soft: true });
         }
 
         return colliders;
