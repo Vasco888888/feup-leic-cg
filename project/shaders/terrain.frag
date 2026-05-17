@@ -92,6 +92,11 @@ void main() {
     vec4 dirtColor   = texture2D(uDirtTexture,   tiledUV);
     vec4 flowerColor = texture2D(uFlowerTexture,  tiledUV);
 
+    // tone the ground grass down so the 3D blades pop against it;
+    // the flower texture sits on grass too, so match its brightness
+    grassColor.rgb  *= 0.72;
+    flowerColor.rgb *= 0.72;
+
     float slope = 1.0 - dot(normalize(vNormal), vec3(0.0, 1.0, 0.0));
     float slopeDirt = smoothstep(0.25, 0.55, slope);
 
