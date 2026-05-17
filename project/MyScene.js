@@ -170,6 +170,15 @@ export class MyScene extends CGFscene {
         this.cloudShader = new CGFshader(this.gl, "shaders/clouds.vert", "shaders/clouds.frag");
         this.cloudShader.setUniformsValues({ uCloudOffset: 0.0 });
 
+        this.mountainShader = new CGFshader(this.gl, "shaders/mountain.vert", "shaders/mountain.frag");
+        this.mountainShader.setUniformsValues({
+            uTexture: 0,
+            uTint: [1.0, 1.0, 1.0],
+            uFogColor: [0.78, 0.85, 0.92],
+            uFogStrength: 0.0,
+            uPanoramaHeight: 1.0
+        });
+
         this.setUpdatePeriod(50);
     }
 
@@ -654,25 +663,59 @@ export class MyScene extends CGFscene {
     displayMountainPanorama() {
         this.pushMatrix();
 
-        // sky shader must not affect the panorama
-        this.setActiveShader(this.defaultShader);
-
         this.gl.enable(this.gl.BLEND);
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+
+        const hazeColor = this.getMountainHazeColor();
+
+        this.setActiveShader(this.mountainShader);
 
         this.pushMatrix();
         this.translate(0, this.terrainYOffset - 20, 0);
         this.mountainFarAppearance.apply();
+        this.mountainFarTexture.bind(0);
+        this.mountainShader.setUniformsValues({
+            uTexture: 0,
+            uTint: [0.78, 0.82, 0.92],
+            uFogColor: hazeColor,
+            uFogStrength: 0.55,
+            uPanoramaHeight: this.mountainFarPanorama.height
+        });
         this.mountainFarPanorama.display();
         this.popMatrix();
 
         this.pushMatrix();
         this.translate(0, this.terrainYOffset - 10, 0);
         this.mountainAppearance.apply();
+        this.mountainTexture.bind(0);
+        this.mountainShader.setUniformsValues({
+            uTexture: 0,
+            uTint: [1.0, 1.0, 1.0],
+            uFogColor: hazeColor,
+            uFogStrength: 0.22,
+            uPanoramaHeight: this.mountainPanorama.height
+        });
         this.mountainPanorama.display();
         this.popMatrix();
 
+        this.setActiveShader(this.defaultShader);
+
         this.gl.disable(this.gl.BLEND);
         this.popMatrix();
+    }
+
+    getMountainHazeColor() {
+        const sunElevation = this.sunDirection[1];
+        const day = [0.75, 0.85, 0.95];
+        const sunset = [0.92, 0.62, 0.45];
+        const night = [0.12, 0.15, 0.22];
+        const daySunsetMix = this.smoothstep(-0.15, 0.35, sunElevation);
+        const sunsetNightMix = this.smoothstep(-0.5, -0.1, sunElevation);
+        const out = [0, 0, 0];
+        for (let i = 0; i < 3; i++) {
+            const sd = sunset[i] + (day[i] - sunset[i]) * daySunsetMix;
+            out[i] = night[i] + (sd - night[i]) * sunsetNightMix;
+        }
+        return out;
     }
 }
