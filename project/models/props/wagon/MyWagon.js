@@ -14,6 +14,8 @@ const WHEEL_OFFSET_Z = 1.1;
 const FRONT_WHEEL_Y = 0.5;
 const REAR_WHEEL_Y = 0.6;
 const REAR_WHEEL_SCALE = 1.2;
+const FRONT_WHEEL_RADIUS_WORLD = 0.5 * WAGON_SCALE;
+const REAR_WHEEL_RADIUS_WORLD = 0.5 * REAR_WHEEL_SCALE * WAGON_SCALE;
 
 // kinematics tuned for a horse walking pace
 const MAX_SPEED = 5.0;
@@ -50,6 +52,10 @@ export class MyWagon extends CGFobject {
         this.heading = 0;
         this.speed = 0;
         this.steering = 0;
+
+        // accumulated rolling angles (radians)
+        this.frontSpin = 0;
+        this.rearSpin = 0;
     }
 
     update(dtSeconds) {
@@ -98,6 +104,10 @@ export class MyWagon extends CGFobject {
         // local +X is the wagon's forward; rotation by heading around +Y maps it to (cos, 0, -sin)
         this.position[0] += dist * Math.cos(this.heading);
         this.position[2] += -dist * Math.sin(this.heading);
+
+        // wheel rolling — front wheels are smaller so they spin faster
+        this.frontSpin += dist / FRONT_WHEEL_RADIUS_WORLD;
+        this.rearSpin += dist / REAR_WHEEL_RADIUS_WORLD;
     }
 
     display() {
@@ -114,29 +124,51 @@ export class MyWagon extends CGFobject {
         this.bed.display();
         this.scene.popMatrix();
 
-        // front wheels visibly turn with the steering input
+        // front axle group: both wheels, the tongue, and the horse pivot together
+        // around a kingpin at the centre of the front axle (1.1, 0.5, 0).
         this.scene.pushMatrix();
-        this.scene.translate(FRONT_WHEEL_OFFSET_X, FRONT_WHEEL_Y, WHEEL_OFFSET_Z);
+        this.scene.translate(FRONT_WHEEL_OFFSET_X, FRONT_WHEEL_Y, 0);
         this.scene.rotate(this.steering, 0, 1, 0);
+
+        this.scene.pushMatrix();
+        this.scene.translate(0, 0, WHEEL_OFFSET_Z);
+        this.scene.rotate(-this.frontSpin, 0, 0, 1);
         this.wheel.display();
         this.scene.popMatrix();
 
         this.scene.pushMatrix();
-        this.scene.translate(FRONT_WHEEL_OFFSET_X, FRONT_WHEEL_Y, -WHEEL_OFFSET_Z);
-        this.scene.rotate(this.steering, 0, 1, 0);
+        this.scene.translate(0, 0, -WHEEL_OFFSET_Z);
+        this.scene.rotate(-this.frontSpin, 0, 0, 1);
         this.wheel.display();
         this.scene.popMatrix();
+
+        // tongue's rear end sits at the kingpin and extends forward in local +X
+        this.tongue.display();
+
+        // horse is harnessed to the tongue tip, so it swings with the same pivot
+        this.scene.pushMatrix();
+        this.scene.translate(2.0, -0.5, 0);
+        this.scene.scale(0.0013, 0.0013, 0.0013);
+        this.scene.rotate(Math.PI / 2, 0, 1, 0);
+        this.scene.rotate(Math.PI / 2, -1, 0, 0);
+        this.horseMaterial.apply();
+        this.horse.display();
+        this.scene.popMatrix();
+
+        this.scene.popMatrix(); // end front axle group
 
         // rear wheels — fixed orientation, larger radius
         this.scene.pushMatrix();
         this.scene.translate(REAR_WHEEL_OFFSET_X, REAR_WHEEL_Y, WHEEL_OFFSET_Z);
         this.scene.scale(REAR_WHEEL_SCALE, REAR_WHEEL_SCALE, REAR_WHEEL_SCALE);
+        this.scene.rotate(-this.rearSpin, 0, 0, 1);
         this.wheel.display();
         this.scene.popMatrix();
 
         this.scene.pushMatrix();
         this.scene.translate(REAR_WHEEL_OFFSET_X, REAR_WHEEL_Y, -WHEEL_OFFSET_Z);
         this.scene.scale(REAR_WHEEL_SCALE, REAR_WHEEL_SCALE, REAR_WHEEL_SCALE);
+        this.scene.rotate(-this.rearSpin, 0, 0, 1);
         this.wheel.display();
         this.scene.popMatrix();
 
@@ -151,11 +183,6 @@ export class MyWagon extends CGFobject {
         this.scene.popMatrix();
 
         this.scene.pushMatrix();
-        this.scene.translate(1.1, 0.5, 0);
-        this.tongue.display();
-        this.scene.popMatrix();
-
-        this.scene.pushMatrix();
         this.scene.translate(1.3, 1.1, 0.75);
         this.lamp.display();
         this.scene.popMatrix();
@@ -163,15 +190,6 @@ export class MyWagon extends CGFobject {
         this.scene.pushMatrix();
         this.scene.translate(1.3, 1.1, -0.75);
         this.lamp.display();
-        this.scene.popMatrix();
-
-        this.scene.pushMatrix();
-        this.scene.translate(3.1, 0.0, 0);
-        this.scene.scale(0.0013, 0.0013, 0.0013);
-        this.scene.rotate(Math.PI / 2, 0, 1, 0);
-        this.scene.rotate(Math.PI / 2, -1, 0, 0);
-        this.horseMaterial.apply();
-        this.horse.display();
         this.scene.popMatrix();
 
         this.scene.popMatrix();
