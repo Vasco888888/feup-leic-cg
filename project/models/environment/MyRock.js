@@ -1,19 +1,9 @@
 import { CGFobject } from "../../../lib/CGF.js";
 
 /**
- * Rock geometry — a sphere with procedural vertex perturbation
- * to create natural-looking irregular rock shapes.
- *
- * Each rock is generated from a seed so every instance can look unique.
+ * Sphere with seeded fbm vertex displacement that gives each rock a unique shape.
  */
 export class MyRock extends CGFobject {
-    /**
-     * @param {CGFscene} scene
-     * @param {number}   slices       Longitude divisions
-     * @param {number}   stacks       Latitude divisions
-     * @param {number}   seed         Noise seed for unique shape
-     * @param {number}   perturbation Max vertex displacement (0–1 range)
-     */
     constructor(scene, slices = 12, stacks = 8, seed = 0, perturbation = 0.25) {
         super(scene);
         this.slices = slices;
@@ -22,8 +12,6 @@ export class MyRock extends CGFobject {
         this.perturbation = perturbation;
         this.initBuffers();
     }
-
-    // ── Noise helpers (same style as MyTerrain) ──
 
     _hash(x, y) {
         let h = (x * 374761393 + y * 668265263 + this.seed * 1013) | 0;
@@ -50,9 +38,6 @@ export class MyRock extends CGFobject {
         return nx0 + (nx1 - nx0) * sy;
     }
 
-    /**
-     * Multi-octave noise for vertex perturbation.
-     */
     _fbm(x, y) {
         let value = 0, amp = 1, freq = 2.0, maxAmp = 0;
         for (let i = 0; i < 3; i++) {
@@ -70,10 +55,9 @@ export class MyRock extends CGFobject {
         this.texCoords = [];
         this.indices = [];
 
-        // ── 1. Generate perturbed sphere vertices ──
         for (let stack = 0; stack <= this.stacks; stack++) {
             const v = stack / this.stacks;
-            const theta = v * Math.PI; // 0 (top) → π (bottom)
+            const theta = v * Math.PI;
             const cosTheta = Math.cos(theta);
             const sinTheta = Math.sin(theta);
 
@@ -83,16 +67,14 @@ export class MyRock extends CGFobject {
                 const cosPhi = Math.cos(phi);
                 const sinPhi = Math.sin(phi);
 
-                // Base sphere position (radius 1)
                 let nx = sinTheta * cosPhi;
                 let ny = cosTheta;
                 let nz = sinTheta * sinPhi;
 
-                // Vertex perturbation via noise
                 const noiseVal = this._fbm(u * 5 + this.seed, v * 5);
                 const displacement = 1.0 + (noiseVal - 0.5) * 2.0 * this.perturbation;
 
-                // Flatten the rock slightly (scale Y down)
+                // squash y so rocks read as boulders rather than spheres
                 const flattenY = 0.6 + this._hash(this.seed, this.seed + 7) * 0.3;
 
                 const x = nx * displacement;
@@ -101,14 +83,13 @@ export class MyRock extends CGFobject {
 
                 this.vertices.push(x, y, z);
 
-                // Use the sphere normal (good enough for lighting)
+                // sphere normal is close enough once displacement is small
                 this.normals.push(nx, ny, nz);
 
                 this.texCoords.push(u, v);
             }
         }
 
-        // ── 2. Build triangle indices ──
         for (let stack = 0; stack < this.stacks; stack++) {
             for (let slice = 0; slice < this.slices; slice++) {
                 const first = stack * (this.slices + 1) + slice;

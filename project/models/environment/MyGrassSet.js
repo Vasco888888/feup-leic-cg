@@ -2,13 +2,7 @@ import { CGFappearance, CGFshader, CGFtexture } from "../../../lib/CGF.js";
 import { MyGrassPatch } from "./MyGrassPatch.js";
 
 /**
- * Scatters grass patches across the terrain.
- *
- * Manages two types:
- *  - Dense green grass patches
- *  - Dead/dry yellowish grass patches
- *
- * Uses a wind shader for animation.
+ * Scatters dense green and dry wheat grass patches with a shared wind shader.
  */
 export class MyGrassSet {
     constructor(scene, terrain, denseCount = 40, deadCount = 15, areaRadius = 190, seed = 456) {
@@ -17,14 +11,12 @@ export class MyGrassSet {
         this.areaRadius = areaRadius;
         this.seed = seed;
 
-        // Create grass shader with wind animation
         this.grassShader = new CGFshader(
             scene.gl,
             "shaders/grass.vert",
             "shaders/grass.frag"
         );
 
-        // Collect obstacles (rocks and flowers) so grass patches don't overlap them
         this.obstacles = [];
         if (scene.rockSet) {
             for (const r of scene.rockSet.placements) {
@@ -54,7 +46,7 @@ export class MyGrassSet {
             uScale: [1, 1]
         });
 
-        // Grass appearance (no texture needed — shader colours it)
+        // shader supplies the colour, so no texture is bound
         this.grassAppearance = new CGFappearance(scene);
         this.grassAppearance.setAmbient(0.3, 0.5, 0.2, 1);
         this.grassAppearance.setDiffuse(0.4, 0.6, 0.25, 1);
@@ -64,38 +56,28 @@ export class MyGrassSet {
         this.patchPool = [];
         const poolSize = 6;
         for (let i = 0; i < poolSize; i++) {
-            // Reduce radius drastically so each patch is small. This ensures flat patches 
-            // don't jut out over the procedurally generated rolling hills.
-            const radius = 3.0 + this._seededRandom(i * 2 + 1) * 3.0; // 3.0 to 6.0
+            // keep patches small so they hug rolling hills
+            const radius = 3.0 + this._seededRandom(i * 2 + 1) * 3.0;
             const area = Math.PI * radius * radius;
-            const bladeCount = Math.floor(area * 3.5); // ~3.5 blades per square unit
+            const bladeCount = Math.floor(area * 3.5);
             this.patchPool.push(new MyGrassPatch(scene, bladeCount, radius, seed + i * 37));
         }
 
-        // Generate placements
         this.densePlacements = this._generatePlacements(denseCount, false);
         this.deadPlacements = this._generatePlacements(deadCount, true);
     }
 
-    /**
-     * Generates a deterministic pseudo-random number in [0, 1] from an integer index.
-     * Uses large prime numbers to mix the bits and avoid repeating patterns.
-     * Same seed + same index always gives the same result (reproducible).
-     */
     _seededRandom(index) {
-        // Combine index and seed using large primes to spread values apart
         let h = (index * 374761393 + this.seed * 668265263) | 0;
-        // XOR-shift: mix the high bits into the low bits for better distribution
         h = Math.imul(h ^ (h >>> 13), 1274126177);
         h = h ^ (h >>> 16);
-        // Convert to a float in [0, 1] by masking to positive and dividing
         return (h & 0x7fffffff) / 0x7fffffff;
     }
 
     _generatePlacements(count, isDead) {
         const placements = [];
         let attempts = 0;
-        const maxAttempts = count * 100; // Increased significantly to find spots in restricted zones
+        const maxAttempts = count * 100;
         const offset = isDead ? 10000 : 0;
 
         while (placements.length < count && attempts < maxAttempts) {
@@ -107,7 +89,7 @@ export class MyGrassSet {
             const worldX = Math.cos(angle) * dist;
             const worldZ = Math.sin(angle) * dist;
 
-            // Skip if on the dirt path (same curve used in terrain.frag)
+            // mirror the dirt path curve from terrain.frag so grass avoids it
             const terrainSize = 520;
             const TWO_PI = 6.2831;
             const u = worldX / terrainSize + 0.5;
@@ -125,25 +107,21 @@ export class MyGrassSet {
             const pathHalfWidth = 0.035;
             if (Math.abs(u - pathCentreX) < pathHalfWidth) continue;
 
-            // Use a simple organic sine-wave pattern to create distinct 'zones' for wheat and green grass
+            // wheat lives in zone peaks, green in valleys; gap between -0.2 and 0.4 keeps them apart
             const zone = Math.sin(worldX * 0.03) * Math.cos(worldZ * 0.03);
-            
-            // Wheat (isDead) only spawns in the positive peaks, Green only in the negative valleys
-            // We leave a gap between -0.2 and +0.4 so their massive patches don't touch at the borders
+
             if (isDead && zone < 0.4) continue;
             if (!isDead && zone > -0.2) continue;
 
-            // Skip if the patch centre overlaps a rock or flower
             if (this._collidesWithObstacles(worldX, worldZ)) continue;
 
             const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
             const patchIdx = Math.floor(this._seededRandom(idx * 3 + 2) * this.patchPool.length);
 
-            // Irregular scaling and rotation to break the circular shape.
-            // We make scaleZ the inverse of scaleX so the overall Area (and therefore Density) remains perfectly constant!
+            // scaleZ = 1/scaleX preserves patch area while breaking the circular outline
             const rotY = this._seededRandom(idx * 3 + 3) * Math.PI * 2;
-            const scaleX = 0.5 + this._seededRandom(idx * 3 + 4) * 1.5; // Stretch randomly between 0.5 and 2.0
-            const scaleZ = 1.0 / scaleX; // Squash the other axis to preserve area
+            const scaleX = 0.5 + this._seededRandom(idx * 3 + 4) * 1.5;
+            const scaleZ = 1.0 / scaleX;
 
             placements.push({
                 x: worldX, y: worldY, z: worldZ,
@@ -164,7 +142,8 @@ export class MyGrassSet {
     }
 
     update(t, sunInfluence = 1.0) {
-        this.time = (t / 1000.0) % 10000.0; // Modulo prevents GLSL float precision loss
+        // modulo keeps the GLSL float from losing precision over long runs
+        this.time = (t / 1000.0) % 10000.0;
         this.sunInfluence = sunInfluence;
     }
 
@@ -174,10 +153,9 @@ export class MyGrassSet {
         scene.setActiveShader(this.grassShader);
         this.grassAppearance.apply();
 
-        // Disable face culling for grass (visible from both sides)
+        // grass blades are double-sided
         scene.gl.disable(scene.gl.CULL_FACE);
 
-        // ── Dense green patches ──
         this.grassShader.setUniformsValues({
             uTime: this.time || 0,
             uSunInfluence: this.sunInfluence !== undefined ? this.sunInfluence : 1.0,
@@ -191,7 +169,7 @@ export class MyGrassSet {
             scene.translate(p.x, p.y, p.z);
             scene.rotate(p.rotY, 0, 1, 0);
             scene.scale(p.scaleX, 1.0, p.scaleZ);
-            this.grassShader.setUniformsValues({ 
+            this.grassShader.setUniformsValues({
                 uPatchPos: [p.x, p.y, p.z],
                 uRotY: p.rotY,
                 uScale: [p.scaleX, p.scaleZ]
@@ -200,12 +178,11 @@ export class MyGrassSet {
             scene.popMatrix();
         }
 
-        // ── Dead/dry patches ──
         this.grassShader.setUniformsValues({
             uTime: this.time || 0,
             uSunInfluence: this.sunInfluence !== undefined ? this.sunInfluence : 1.0,
             uWindStrength: 0.6,
-            uGrassColor: [0.85, 0.75, 0.35], // Golden wheat color
+            uGrassColor: [0.85, 0.75, 0.35],
             uIsDead: 1
         });
 

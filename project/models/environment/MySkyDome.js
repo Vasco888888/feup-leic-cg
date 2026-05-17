@@ -41,7 +41,7 @@ export class MySkyDome extends CGFobject {
                 const current = stack * stride + slice;
                 const next = current + stride;
 
-                // Reversed winding so triangles face inward.
+                // reversed winding so triangles face inward
                 this.indices.push(current, next + 1, next);
                 this.indices.push(current, current + 1, next + 1);
             }

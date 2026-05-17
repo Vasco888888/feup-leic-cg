@@ -54,13 +54,12 @@ void main() {
     float daySunsetMix = smoothstep(-0.15, 0.4, sunElevation);
     float sunsetNightMix = smoothstep(-0.5, -0.1, sunElevation);
 
-    // Color states
     vec3 dBase = vec3(0.55, 0.65, 0.8);
     vec3 dTop = vec3(1.0, 1.0, 1.0);
-    
+
     vec3 sBase = vec3(0.4, 0.25, 0.45);
     vec3 sTop = vec3(1.0, 0.7, 0.4);
-    
+
     vec3 nBase = vec3(0.015, 0.02, 0.04);
     vec3 nTop = vec3(0.03, 0.05, 0.1);
 

@@ -1,7 +1,7 @@
 import { CGFobject } from "../../../lib/CGF.js";
 
 /**
- * Simple subdivided plane centered at origin in the XY plane.
+ * Subdivided plane centered at origin in the XY plane.
  */
 export class MyPlane extends CGFobject {
     constructor(scene, nrDivs = 1, minS = 0, maxS = 1, minT = 0, maxT = 1) {

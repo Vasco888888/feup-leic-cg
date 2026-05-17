@@ -1,14 +1,10 @@
 import { CGFobject, CGFappearance, CGFtexture } from '../../../../lib/CGF.js';
 
-/**
- * MyHayBale
- */
 export class MyHayBale extends CGFobject {
     constructor(scene) {
         super(scene);
         this.initBuffers();
 
-        // Hay Material
         this.hayMaterial = new CGFappearance(scene);
         this.hayMaterial.setAmbient(0.6, 0.6, 0.4, 1.0);
         this.hayMaterial.setDiffuse(1.0, 1.0, 1.0, 1.0);
@@ -19,7 +15,7 @@ export class MyHayBale extends CGFobject {
         this.hayMaterial.setTexture(this.hayTexture);
         this.hayMaterial.setTextureWrap('REPEAT', 'REPEAT');
 
-        // Twine Material (Dark Brown)
+        // dark brown twine
         this.twineMaterial = new CGFappearance(scene);
         this.twineMaterial.setAmbient(0.2, 0.1, 0.05, 1.0);
         this.twineMaterial.setDiffuse(0.3, 0.15, 0.07, 1.0);
@@ -27,7 +23,7 @@ export class MyHayBale extends CGFobject {
     }
 
     initBuffers() {
-        // Dimensions: 1.0 (X) x 0.5 (Y) x 0.5 (Z)
+        // half-extents for a 1.0 x 0.5 x 0.5 box
         const x = 0.5;
         const y = 0.25;
         const z = 0.25;
@@ -60,11 +56,10 @@ export class MyHayBale extends CGFobject {
         this.texCoords = [];
         for(let i=0; i<6; i++) {
             let s = i * 4;
-            // Front face
+            // both winding orders so the bale is double-sided
             this.indices.push(s, s+1, s+3, s, s+3, s+2);
-            // Back face
             this.indices.push(s+3, s+1, s, s+2, s+3, s);
-            
+
             this.texCoords.push(0,1, 1,1, 0,0, 1,0);
         }
 
@@ -75,21 +70,17 @@ export class MyHayBale extends CGFobject {
     }
 
     display() {
-        // --- Bale ---
         this.hayMaterial.apply();
         super.display();
 
-        // --- Twine Bands ---
         this.twineMaterial.apply();
-        
-        // Band 1
+
         this.scene.pushMatrix();
         this.scene.translate(-0.25, 0, 0);
         this.scene.scale(0.02, 0.52, 0.52);
         this.twineBox.display();
         this.scene.popMatrix();
 
-        // Band 2
         this.scene.pushMatrix();
         this.scene.translate(0.25, 0, 0);
         this.scene.scale(0.02, 0.52, 0.52);
@@ -98,9 +89,6 @@ export class MyHayBale extends CGFobject {
     }
 }
 
-/**
- * Internal helper for twine geometry
- */
 class MyHayBaleTwine extends CGFobject {
     constructor(scene) {
         super(scene);
