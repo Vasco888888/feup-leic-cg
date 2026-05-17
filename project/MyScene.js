@@ -176,7 +176,8 @@ export class MyScene extends CGFscene {
             uTint: [1.0, 1.0, 1.0],
             uFogColor: [0.78, 0.85, 0.92],
             uFogStrength: 0.0,
-            uPanoramaHeight: 1.0
+            uPanoramaHeight: 1.0,
+            uSunInfluence: 1.0
         });
 
         this.setUpdatePeriod(50);
@@ -679,7 +680,8 @@ export class MyScene extends CGFscene {
             uTint: [0.78, 0.82, 0.92],
             uFogColor: hazeColor,
             uFogStrength: 0.55,
-            uPanoramaHeight: this.mountainFarPanorama.height
+            uPanoramaHeight: this.mountainFarPanorama.height,
+            uSunInfluence: this.sunInfluence
         });
         this.mountainFarPanorama.display();
         this.popMatrix();
@@ -693,7 +695,8 @@ export class MyScene extends CGFscene {
             uTint: [1.0, 1.0, 1.0],
             uFogColor: hazeColor,
             uFogStrength: 0.22,
-            uPanoramaHeight: this.mountainPanorama.height
+            uPanoramaHeight: this.mountainPanorama.height,
+            uSunInfluence: this.sunInfluence
         });
         this.mountainPanorama.display();
         this.popMatrix();
