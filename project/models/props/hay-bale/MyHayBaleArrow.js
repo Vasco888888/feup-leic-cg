@@ -1,17 +1,17 @@
-import { CGFobject, CGFappearance } from '../../../../lib/CGF.js';
+import { CGFobject, CGFshader } from '../../../../lib/CGF.js';
 
 export class MyHayBaleArrow extends CGFobject {
     constructor(scene) {
         super(scene);
         this.initBuffers();
 
-        this.material = new CGFappearance(scene);
-        this.material.setAmbient(0.9, 0.7, 0.1, 1.0);
-        this.material.setDiffuse(1.0, 0.85, 0.25, 1.0);
-        this.material.setSpecular(1.0, 1.0, 0.6, 1.0);
-        this.material.setShininess(40.0);
-        // emissive so it stays visible at night
-        this.material.setEmission(0.35, 0.25, 0.05, 1.0);
+        // shader drives the spin and bob on the GPU; CPU just places the arrow
+        this.shader = new CGFshader(scene.gl, "shaders/arrow.vert", "shaders/arrow.frag");
+        this.shader.setUniformsValues({
+            uTipColor:  [1.0, 0.95, 0.45],
+            uBaseColor: [1.0, 0.55, 0.10],
+            uTime: 0.0
+        });
     }
 
     initBuffers() {
@@ -62,10 +62,16 @@ export class MyHayBaleArrow extends CGFobject {
 
     display() {
         const gl = this.scene.gl;
+        const tSec = (this.scene.currentTime || 0) / 1000.0;
+
+        this.scene.setActiveShader(this.shader);
+        this.shader.setUniformsValues({ uTime: tSec });
+
         // visible from any angle
         gl.disable(gl.CULL_FACE);
-        this.material.apply();
         super.display();
         gl.enable(gl.CULL_FACE);
+
+        this.scene.setActiveShader(this.scene.defaultShader);
     }
 }

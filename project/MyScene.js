@@ -553,14 +553,9 @@ export class MyScene extends CGFscene {
             this.hayBale.display();
             this.popMatrix();
 
-            // floating arrow over the bale, bobbing and spinning
-            const tSec = (this.currentTime || 0) / 1000.0;
-            const baseY = groundY + this.balePos[1] + 1.6;
-            const bob = Math.sin(tSec * 2.2) * 0.35;
-            const spin = tSec * 1.0;
+            // arrow shader handles spin and vertical bob from uTime
             this.pushMatrix();
-            this.translate(this.balePos[0], baseY + bob, this.balePos[2]);
-            this.rotate(spin, 0, 1, 0);
+            this.translate(this.balePos[0], groundY + this.balePos[1] + 1.6, this.balePos[2]);
             this.hayBaleArrow.display();
             this.popMatrix();
         }
