@@ -191,8 +191,9 @@ export class MyWagon extends CGFobject {
     }
 
     dropPosition() {
-        // drop just behind the wagon so it doesn't collide with the rear wheels
-        const dropLocalX = REAR_WHEEL_OFFSET_X * WAGON_SCALE - 1.5;
+        // far enough back to clear the wagon's rear collision circle plus the
+        // bale's, otherwise dropping shoves the wagon forward on the next frame
+        const dropLocalX = REAR_WHEEL_OFFSET_X * WAGON_SCALE - 4.0;
         const cos = Math.cos(this.heading);
         const sin = Math.sin(this.heading);
         return [
