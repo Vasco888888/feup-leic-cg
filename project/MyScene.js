@@ -5,6 +5,7 @@ import { MyWagon } from "./models/props/wagon/MyWagon.js";
 import { MyHayBale } from "./models/props/hay-bale/MyHayBale.js";
 import { MyHayBaleArrow } from "./models/props/hay-bale/MyHayBaleArrow.js";
 import { MyBarn } from "./models/props/barn/MyBarn.js";
+import { MyDeliveryZone } from "./models/props/barn/MyDeliveryZone.js";
 import { MyTerrain } from "./models/environment/MyTerrain.js";
 import { MyRockSet } from "./models/environment/MyRockSet.js";
 import { MyFlowerSet } from "./models/environment/MyFlowerSet.js";
@@ -51,6 +52,10 @@ export class MyScene extends CGFscene {
         // HP decay and score share one tick so the two readouts move in lockstep.
         this.score = 0;
         this._tickAccum = 0;
+
+        // delivery zone — circular drop spot in front of the barn; the ring
+        // highlights when the wagon enters it
+        this.wagonInDeliveryZone = false;
 
         // hay bales scattered around the field; populated in init() once barn is placed
         this.bales = [];
@@ -102,6 +107,8 @@ export class MyScene extends CGFscene {
         this.barnPos = { x: -20, z: -20 };
         this.terrain = new MyTerrain(this, 144, 3000, 12, 42);
         this.bales = this._generateBales(22, 2024);
+        // sits just in front of the barn door (barn front face at world Z = barnPos.z + 5)
+        this.deliveryZone = new MyDeliveryZone(this, this.barnPos.x, this.barnPos.z + 12, 5.5, this.terrain);
         this.rockSet = new MyRockSet(this, this.terrain, 95, 520, 123);
         this.flowerSet = new MyFlowerSet(this, this.terrain, 150, 500, 777);
         // many small patches so they hug the rolling hills
@@ -442,6 +449,7 @@ export class MyScene extends CGFscene {
             this.applyWagonTerrainTilt(dt);
             this.handleHayBaleKeys();
             this.applyImpactDamage();
+            this.applyDelivery();
             if (this.cameraFollow) this.updateChaseCamera(dt);
         }
 
@@ -623,6 +631,14 @@ export class MyScene extends CGFscene {
             const damage = 5 + Math.floor(Math.random() * 11);
             this.wagonHP = Math.max(0, this.wagonHP - damage);
         }
+    }
+
+    applyDelivery() {
+        if (!this.deliveryZone || !this.wagon) return;
+        this.wagonInDeliveryZone = this.deliveryZone.contains(
+            this.wagon.position[0],
+            this.wagon.position[2]
+        );
     }
 
     handleHayBaleKeys() {
@@ -816,6 +832,13 @@ export class MyScene extends CGFscene {
         this.translate(this.barnPos.x, this.terrainYOffset, this.barnPos.z);
         this.barn.display();
         this.popMatrix();
+
+        if (this.deliveryZone) {
+            this.pushMatrix();
+            this.translate(0, this.terrainYOffset, 0);
+            this.deliveryZone.display(this.wagonInDeliveryZone);
+            this.popMatrix();
+        }
 
         // bales: cull distant ones so we don't pay for unseen geometry
         const camX = this.camera ? this.camera.position[0] : 0;
