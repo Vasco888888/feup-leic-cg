@@ -12,15 +12,12 @@ export class MyRockSet {
         this.areaRadius = areaRadius;
         this.seed = seed;
 
-        // shared pool: every placement reuses one of these geometries.
-        // mix 0-subdiv (20 faces, very crystalline) and 1-subdiv (80 faces, chunkier)
-        // so the scatter has a range of sizes and silhouettes.
+        // shared pool: every placement reuses one of these geometries
         this.rockShapes = [];
         const numShapes = 6;
         for (let i = 0; i < numShapes; i++) {
-            const subdivisions = this._seededRandom(i * 3) < 0.6 ? 0 : 1;
             const perturbation = 0.28 + this._seededRandom(i * 3 + 2) * 0.3;
-            this.rockShapes.push(new MyRock(scene, subdivisions, i * 17, perturbation));
+            this.rockShapes.push(new MyRock(scene, i * 17, perturbation));
         }
 
         this.rockTextures = [
@@ -90,9 +87,6 @@ export class MyRockSet {
     }
 
     display() {
-        // vertex perturbation can flip winding, so culling stays off
-        this.scene.gl.disable(this.scene.gl.CULL_FACE);
-
         const cam = this.scene.camera;
         const camX = cam ? cam.position[0] : 0;
         const camZ = cam ? cam.position[2] : 0;
@@ -117,7 +111,5 @@ export class MyRockSet {
 
             this.scene.popMatrix();
         }
-
-        this.scene.gl.enable(this.scene.gl.CULL_FACE);
     }
 }
