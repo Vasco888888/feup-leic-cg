@@ -679,6 +679,10 @@ export class MyScene extends CGFscene {
 
     displaySkyDome() {
         this.pushMatrix();
+        // keep the dome centred on the camera so its edge never drifts into view
+        if (this.camera) {
+            this.translate(this.camera.position[0], 0, this.camera.position[2]);
+        }
         this.scale(this.skyRadius, this.skyRadius, this.skyRadius);
 
         // camera lives inside the dome, so render both sides
