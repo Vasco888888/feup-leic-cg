@@ -16,9 +16,110 @@
             width: 100%;
             height: 100%;
         }
+
+        /* HUD overlay — wooden-plank signage above the WebGL canvas; never eats input */
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            pointer-events: none;
+            z-index: 10;
+            font-family: "Georgia", "Bookman Old Style", "Palatino Linotype", serif;
+            user-select: none;
+        }
+
+        #hud-tl {
+            position: absolute;
+            top: 20px;
+            left: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        #hud-tc {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .hud-item {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+            padding: 10px 22px;
+            color: #f6e6c2;
+            background:
+                repeating-linear-gradient(
+                    90deg,
+                    rgba(0, 0, 0, 0.18) 0,
+                    rgba(0, 0, 0, 0.18) 1px,
+                    transparent 1px,
+                    transparent 28px
+                ),
+                linear-gradient(180deg, #5b3d22 0%, #3b2410 100%);
+            border: 2px solid #2a1a0a;
+            border-radius: 6px;
+            box-shadow:
+                inset 0 1px 0 rgba(255, 215, 150, 0.22),
+                inset 0 -3px 6px rgba(0, 0, 0, 0.55),
+                0 5px 10px rgba(0, 0, 0, 0.40);
+        }
+
+        .hud-label {
+            font-size: 11px;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: #d4b07a;
+            text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.65);
+            font-weight: 700;
+        }
+
+        .hud-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #faecca;
+            text-shadow: 1px 2px 0 rgba(0, 0, 0, 0.65);
+            font-variant-numeric: tabular-nums;
+            min-width: 1.8em;
+            text-align: right;
+        }
+
+        .hud-hp    { box-shadow:
+            inset 5px 0 0 #a3402c,
+            inset 0 1px 0 rgba(255, 215, 150, 0.22),
+            inset 0 -3px 6px rgba(0, 0, 0, 0.55),
+            0 5px 10px rgba(0, 0, 0, 0.40); }
+        .hud-bales { box-shadow:
+            inset 5px 0 0 #c98a2a,
+            inset 0 1px 0 rgba(255, 215, 150, 0.22),
+            inset 0 -3px 6px rgba(0, 0, 0, 0.55),
+            0 5px 10px rgba(0, 0, 0, 0.40); }
+        .hud-score { padding: 12px 28px; }
+        .hud-score .hud-value { color: #f7d27a; font-size: 26px; }
     </style>
 </head>
 <body>
+    <div id="hud">
+        <div id="hud-tl">
+            <div class="hud-item hud-hp">
+                <span class="hud-label">HP</span>
+                <span class="hud-value" id="hud-hp-value">100</span>
+            </div>
+            <div class="hud-item hud-bales">
+                <span class="hud-label">Bales</span>
+                <span class="hud-value" id="hud-bales-value">0</span>
+            </div>
+        </div>
+        <div id="hud-tc">
+            <div class="hud-item hud-score">
+                <span class="hud-label">Score</span>
+                <span class="hud-value" id="hud-score-value">0</span>
+            </div>
+        </div>
+    </div>
     <script type="module" src="main.js"></script>
 </body>
 </html>

@@ -456,6 +456,22 @@ export class MyScene extends CGFscene {
         }
 
         this.updateTerrainEnvironment();
+        this.updateHUD();
+    }
+
+    updateHUD() {
+        // cache the DOM lookups once; readouts are pushed each frame so they
+        // mirror the dat.GUI controllers without an extra render layer
+        if (!this._hudElems) {
+            this._hudElems = {
+                hp: document.getElementById("hud-hp-value"),
+                score: document.getElementById("hud-score-value"),
+                bales: document.getElementById("hud-bales-value")
+            };
+        }
+        if (this._hudElems.hp) this._hudElems.hp.textContent = Math.round(this.wagonHP);
+        if (this._hudElems.score) this._hudElems.score.textContent = this.score;
+        if (this._hudElems.bales) this._hudElems.bales.textContent = this.balesDelivered;
     }
 
     _generateBales(count, seed) {
