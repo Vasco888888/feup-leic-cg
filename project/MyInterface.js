@@ -10,6 +10,11 @@ export class MyInterface extends CGFinterface {
 
         this.gui = new dat.GUI();
 
+        // gameplay readout — listen() so the bar tracks scene state every frame
+        const gameplayFolder = this.gui.addFolder("Gameplay");
+        gameplayFolder.add(this.scene, "wagonHP", 0, this.scene.maxHP).name("Health Points").listen();
+        gameplayFolder.open();
+
         const skyFolder = this.gui.addFolder("Sky");
         skyFolder.add(this.scene, "showSky").name("Show Sky");
         skyFolder.add(this.scene, "showClouds").name("Show Clouds");

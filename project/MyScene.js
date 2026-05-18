@@ -42,6 +42,11 @@ export class MyScene extends CGFscene {
         // wagon physics needs a real dt between frames
         this.lastUpdateTime = null;
 
+        // gameplay HP economy — spec reference values, tune as needed
+        this.maxHP = 100;
+        this.wagonHP = this.maxHP;
+        this.hpDecayPerSec = 1.0;
+
         // hay bales scattered around the field; populated in init() once barn is placed
         this.bales = [];
         // reach point sits ahead of the wagon centre (near the horse), with a
@@ -384,6 +389,10 @@ export class MyScene extends CGFscene {
         }
         this.lastUpdateTime = t;
         this.currentTime = t;
+
+        if (dt > 0) {
+            this.wagonHP = Math.max(0, this.wagonHP - this.hpDecayPerSec * dt);
+        }
 
         if (!this.pauseDayCycle) {
             this.dayTime = (t / 1000.0) * this.dayCycleSpeed;
