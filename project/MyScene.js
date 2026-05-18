@@ -458,17 +458,13 @@ export class MyScene extends CGFscene {
             const x = Math.cos(angle) * dist;
             const z = Math.sin(angle) * dist;
 
-            // keep bales off the dirt roads
-            const u = x / terrainSize + 0.5;
-            const v = z / terrainSize + 0.5;
-            const c1 = 0.5
-                + 0.18 * Math.sin(v * TWO_PI * 1.2 + 0.8)
-                + 0.08 * Math.sin(v * TWO_PI * 2.7 + 2.1);
-            const c2 = 0.5
-                + 0.16 * Math.sin(u * TWO_PI * 1.0 + 1.6)
-                + 0.07 * Math.sin(u * TWO_PI * 2.4 + 4.3);
-            if (Math.abs(u - c1) < 0.045) continue;
-            if (Math.abs(v - c2) < 0.045) continue;
+            // keep bales off the dirt roads (world-unit path math)
+            const c1 = 85.0 * Math.sin(z * 0.0042 + 3.9)
+                     + 28.0 * Math.sin(z * 0.013 + 5.4);
+            const c2 = -40.0 + 55.0 * Math.sin(x * 0.0048 + 4.7)
+                            + 22.0 * Math.sin(x * 0.011 + 1.3);
+            if (Math.abs(x - c1) < 9) continue;
+            if (Math.abs(z - c2) < 9) continue;
 
             // keep clear of the barn and the wagon spawn
             const dxBarn = x - this.barnPos.x;
