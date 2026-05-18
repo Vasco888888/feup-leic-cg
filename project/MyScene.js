@@ -428,6 +428,7 @@ export class MyScene extends CGFscene {
             );
             this.applyWagonTerrainTilt(dt);
             this.handleHayBaleKeys();
+            this.applyImpactDamage();
             if (this.cameraFollow) this.updateChaseCamera(dt);
         }
 
@@ -602,6 +603,17 @@ export class MyScene extends CGFscene {
         }
 
         return colliders;
+    }
+
+    applyImpactDamage() {
+        // each new contact with a damaging collider takes a random 5..15 HP bite;
+        // wagon's edge-detection guarantees a single hit per contact event
+        const hits = this.wagon.newCollisionIds;
+        if (!hits || hits.length === 0) return;
+        for (let i = 0; i < hits.length; i++) {
+            const damage = 5 + Math.floor(Math.random() * 11);
+            this.wagonHP = Math.max(0, this.wagonHP - damage);
+        }
     }
 
     handleHayBaleKeys() {

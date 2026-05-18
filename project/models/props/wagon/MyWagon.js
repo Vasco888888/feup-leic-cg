@@ -75,6 +75,11 @@ export class MyWagon extends CGFobject {
         // hay-bale carrying slots — holds references to scene bale entries
         this.carriedBales = [];
         this.maxBales = 2;
+
+        // damaging-collider edge detection: IDs we're pressed against right now,
+        // and IDs that became active this frame (consumed by the scene as damage)
+        this.activeCollisionIds = new Set();
+        this.newCollisionIds = [];
     }
 
     update(dtSeconds, colliders = []) {
@@ -127,6 +132,7 @@ export class MyWagon extends CGFobject {
         // resolve obstacle penetration: every collision point along the rig is tested,
         // and overlaps push the wagon centre back out along the contact normal
         let hit = false;
+        const touchedThisFrame = new Set();
         const cosH = Math.cos(this.heading);
         const sinH = Math.sin(this.heading);
         const cosS = Math.cos(this.steering);
@@ -160,6 +166,7 @@ export class MyWagon extends CGFobject {
                     newX += (dx / d) * push;
                     newZ += (dz / d) * push;
                     hit = true;
+                    if (c.damageOnHit && c.id) touchedThisFrame.add(c.id);
                 }
             }
         }
@@ -177,6 +184,14 @@ export class MyWagon extends CGFobject {
 
         // running into something bleeds off momentum so we don't grind against the wall
         if (hit) this.speed *= 0.2;
+
+        // expose IDs that became active this frame so the gameplay layer can
+        // apply impact damage exactly once per contact event
+        this.newCollisionIds = [];
+        for (const id of touchedThisFrame) {
+            if (!this.activeCollisionIds.has(id)) this.newCollisionIds.push(id);
+        }
+        this.activeCollisionIds = touchedThisFrame;
 
         // wheel rolling — front wheels are smaller so they spin faster
         this.frontSpin += dist / FRONT_WHEEL_RADIUS_WORLD;

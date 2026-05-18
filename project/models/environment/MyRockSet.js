@@ -75,12 +75,21 @@ export class MyRockSet {
     }
 
     getColliders() {
-        // approximate each rock as a circle in the XZ plane for wagon collision
+        // approximate each rock as a circle in the XZ plane for wagon collision.
+        // id is stable per placement so the wagon can edge-detect new hits and
+        // damageOnHit flags this collider class as gameplay-damaging.
         const colliders = [];
-        for (const r of this.placements) {
+        for (let i = 0; i < this.placements.length; i++) {
+            const r = this.placements[i];
             const radius = Math.max(r.scaleX, r.scaleZ) * 0.7;
             if (radius > 0.3) {
-                colliders.push({ x: r.x, z: r.z, radius });
+                colliders.push({
+                    x: r.x,
+                    z: r.z,
+                    radius,
+                    id: `rock-${i}`,
+                    damageOnHit: true,
+                });
             }
         }
         return colliders;
