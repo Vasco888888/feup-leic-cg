@@ -57,6 +57,7 @@ export class MyScene extends CGFscene {
         // by the wagon are consumed the instant the wagon enters the disc.
         this.hpPerBaleDelivery = 50;
         this.wagonInDeliveryZone = false;
+        this.balesDelivered = 0;
 
         // hay bales scattered around the field; populated in init() once barn is placed
         this.bales = [];
@@ -643,6 +644,7 @@ export class MyScene extends CGFscene {
             if (carried && carried.length > 0) {
                 const restored = carried.length * this.hpPerBaleDelivery;
                 this.wagonHP = Math.min(this.maxHP, this.wagonHP + restored);
+                this.balesDelivered += carried.length;
                 const deliveredSet = new Set(carried);
                 this.bales = this.bales.filter(b => !deliveredSet.has(b));
                 this.wagon.carriedBales = [];
