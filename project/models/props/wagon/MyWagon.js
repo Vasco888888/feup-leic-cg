@@ -17,8 +17,8 @@ const REAR_WHEEL_SCALE = 1.2;
 const FRONT_WHEEL_RADIUS_WORLD = 0.5 * WAGON_SCALE;
 const REAR_WHEEL_RADIUS_WORLD = 0.5 * REAR_WHEEL_SCALE * WAGON_SCALE;
 
-// kinematics tuned for a horse walking pace
-const MAX_SPEED = 5.0;
+// kinematics tuned for a horse walking pace; maxSpeed is exposed on the instance
+const DEFAULT_MAX_SPEED = 5.0;
 const ACCELERATION = 2.0;
 const BRAKE_DECELERATION = 4.0;
 const FRICTION_DECELERATION = 0.8;
@@ -36,7 +36,7 @@ const HORSE_RADIUS = 1.8;
 const KINGPIN_WORLD_X = FRONT_WHEEL_OFFSET_X * WAGON_SCALE;
 const HORSE_FROM_KINGPIN = 2.0 * WAGON_SCALE;
 // stay clear of the terrain edge
-const WORLD_RADIUS = 580;
+const WORLD_RADIUS = 500;
 
 export class MyWagon extends CGFobject {
     constructor(scene) {
@@ -63,6 +63,7 @@ export class MyWagon extends CGFobject {
         this.heading = 0;
         this.speed = 0;
         this.steering = 0;
+        this.maxSpeed = DEFAULT_MAX_SPEED;
 
         // accumulated rolling angles (radians)
         this.frontSpin = 0;
@@ -101,7 +102,7 @@ export class MyWagon extends CGFobject {
             this.speed -= FRICTION_DECELERATION * dtSeconds;
         }
         if (this.speed < 0) this.speed = 0;          // no reverse
-        if (this.speed > MAX_SPEED) this.speed = MAX_SPEED;
+        if (this.speed > this.maxSpeed) this.speed = this.maxSpeed;
 
         // steering: gradual towards max, springs back when no key is held
         if (aPressed && !dPressed) {

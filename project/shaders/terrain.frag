@@ -97,14 +97,19 @@ void main() {
     }
     float edgeFade = 1.0 - smoothstep(uTerrainRadius * 0.85, uTerrainRadius, distFromCenter);
 
-    float tilingFactor = 40.0;
-    vec2 tiledUV = fract(vTextureCoord * tilingFactor);
+    // tile in world units rather than UV space so the texture scale is independent
+    // of the terrain disc size
+    float tilesPerWorldUnit = 1.0 / 12.0;
+    vec2 tiledUV = fract(vWorldPos.xz * tilesPerWorldUnit);
 
     vec4 grassColor  = texture2D(uGrassTexture,  tiledUV);
     vec4 dirtColor   = texture2D(uDirtTexture,   tiledUV);
+    vec4 flowerColor = texture2D(uFlowerTexture, tiledUV);
 
-    // tone the ground grass down so the 3D blades pop against it
-    grassColor.rgb *= 0.72;
+    // tone the ground grass down so the 3D blades pop against it;
+    // the flower texture sits on grass too, so match its brightness
+    grassColor.rgb  *= 0.72;
+    flowerColor.rgb *= 0.72;
 
     float slope = 1.0 - dot(normalize(vNormal), vec3(0.0, 1.0, 0.0));
     float slopeDirt = smoothstep(0.25, 0.55, slope);
@@ -113,7 +118,13 @@ void main() {
     float pathGrass = pathMask(vWorldPos.xz);
     float dirtFactor = max(slopeDirt, 1.0 - pathGrass);
 
-    vec4 groundColor = mix(grassColor, dirtColor, clamp(dirtFactor, 0.0, 1.0));
+    // cheap single-octave noise picks scattered flower meadows on flat grass
+    float flowerNoise = noise(vWorldPos.xz * 0.05 + vec2(7.3, 2.1));
+    float slopeFlat = 1.0 - smoothstep(0.08, 0.25, slope);
+    float flowerMask = smoothstep(0.55, 0.78, flowerNoise) * slopeFlat * pathGrass * (1.0 - dirtFactor);
+
+    vec4 groundColor = mix(grassColor, flowerColor, clamp(flowerMask, 0.0, 1.0));
+    groundColor = mix(groundColor, dirtColor, clamp(dirtFactor, 0.0, 1.0));
 
     vec3 edgeColor = vec3(0.28, 0.42, 0.18);
     groundColor.rgb = mix(edgeColor, groundColor.rgb, edgeFade);

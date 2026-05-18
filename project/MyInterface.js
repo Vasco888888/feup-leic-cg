@@ -34,6 +34,11 @@ export class MyInterface extends CGFinterface {
         lightFolder.add(this.scene, "spotLightEnabled").name("Spotlight");
         lightFolder.add(this.scene, "pauseDayCycle").name("Pause Cycle");
 
+        const wagonFolder = this.gui.addFolder("Wagon");
+        if (this.scene.wagon) {
+            wagonFolder.add(this.scene.wagon, "maxSpeed", 1, 30).name("Max Speed");
+        }
+
         const cameraFolder = this.gui.addFolder("Camera");
         cameraFolder.add(this.scene, "cameraFollow").name("Follow Wagon");
         cameraFolder.add(this.scene, "cameraOffsetX", -60, 60).name("Offset X");
@@ -66,16 +71,21 @@ export class MyInterface extends CGFinterface {
         return this.activeKeys[keyCode] || false;
     }
 
-    // mouse Y position pans the camera up/down, no click needed
+    // mouse position pans the camera: Y tilts pitch, X swings to the wagon's left/right
     processMouseMove(event) {
         const canvas = this.scene && this.scene.gl ? this.scene.gl.canvas : null;
         if (!canvas) return;
         const rect = canvas.getBoundingClientRect();
+        const relX = event.clientX - rect.left;
         const relY = event.clientY - rect.top;
-        // ny: -1 at top of canvas, +1 at bottom
+        // normalised cursor position, -1 at top/left, +1 at bottom/right
+        const nx = (relX / rect.width) * 2.0 - 1.0;
         const ny = (relY / rect.height) * 2.0 - 1.0;
         // upper half lifts the target (look up to sky), lower half drops it (look down)
         this.scene.cameraPitchOffset = -ny * 80;
+        // swing the camera around to the wagon's right shoulder (left edge of screen)
+        // or left shoulder (right edge) so the wagon is always framed
+        this.scene.cameraSideOffset = -nx * 16;
     }
     processMouseDown(event) {}
     processMouseUp(event) {}

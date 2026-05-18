@@ -63,9 +63,9 @@ export class MyScene extends CGFscene {
         // arrows only float above bales the wagon is close to, so finding them feels earned
         this.baleArrowRange = 55.0;
 
-        // 45-degree side view: offsetX gives the side angle, Y and Z roughly equal
+        // default: directly behind the wagon. mouse X swings to either side.
         this.cameraFollow = true;
-        this.cameraOffsetX = 16.0;
+        this.cameraOffsetX = 0.0;
         this.cameraOffsetY = 8.0;
         this.cameraOffsetZ = 18.0;
         this.cameraTargetUp = 4.0;
@@ -74,8 +74,9 @@ export class MyScene extends CGFscene {
         this.cameraHeadingTau = 0.9;
         // smoothed heading the camera orbits around; matches wagon at rest
         this.cameraHeading = 0;
-        // mouse Y position (no drag) raises/lowers the target so the camera tilts up/down
+        // mouse position (no drag) tilts pitch (Y) and swings side-to-side (X)
         this.cameraPitchOffset = 0;
+        this.cameraSideOffset = 0;
     }
 
     init(application) {
@@ -99,7 +100,7 @@ export class MyScene extends CGFscene {
         this.hayBaleArrow = new MyHayBaleArrow(this);
         this.barn = new MyBarn(this);
         this.barnPos = { x: -20, z: -20 };
-        this.terrain = new MyTerrain(this, 96, 1200, 12, 42);
+        this.terrain = new MyTerrain(this, 144, 3000, 12, 42);
         this.bales = this._generateBales(22, 2024);
         this.rockSet = new MyRockSet(this, this.terrain, 95, 520, 123);
         this.flowerSet = new MyFlowerSet(this, this.terrain, 150, 500, 777);
@@ -161,8 +162,8 @@ export class MyScene extends CGFscene {
             uGrassTexture: 0,
             uDirtTexture: 1,
             uFlowerTexture: 2,
-            uTerrainSize: 1200.0,
-            uTerrainRadius: 595.0,
+            uTerrainSize: 3000.0,
+            uTerrainRadius: 1495.0,
             uLightDir: this.sunDirection,
             uAmbientStrength: 0.18,
             uDiffuseStrength: 0.65,
@@ -450,8 +451,8 @@ export class MyScene extends CGFscene {
     _generateBales(count, seed) {
         const bales = [];
         const TWO_PI = Math.PI * 2;
-        const terrainSize = 1200;
-        const maxDist = 220;
+        const terrainSize = 3000;
+        const maxDist = 460;
         const minDist = 18;
 
         const hash = (n) => {
@@ -574,7 +575,7 @@ export class MyScene extends CGFscene {
         const cosH = Math.cos(this.cameraHeading);
         const sinH = Math.sin(this.cameraHeading);
 
-        const side = this.cameraOffsetX;
+        const side = this.cameraOffsetX + this.cameraSideOffset;
         const back = this.cameraOffsetZ;
 
         const desiredEyeX = w.position[0] + side * sinH - back * cosH;
@@ -691,6 +692,10 @@ export class MyScene extends CGFscene {
 
     displaySkyDome() {
         this.pushMatrix();
+        // keep the dome centred on the camera so its edge never drifts into view
+        if (this.camera) {
+            this.translate(this.camera.position[0], 0, this.camera.position[2]);
+        }
         this.scale(this.skyRadius, this.skyRadius, this.skyRadius);
 
         // camera lives inside the dome, so render both sides
@@ -729,7 +734,7 @@ export class MyScene extends CGFscene {
         // sits just below the terrain base so it never z-fights
         this.translate(0, this.terrainYOffset - 0.02, 0);
         this.rotate(-Math.PI / 2, 1, 0, 0);
-        this.scale(1500, 1500, 1);
+        this.scale(3000, 3000, 1);
 
         this.floorAppearance.apply();
         this.floor.display();
