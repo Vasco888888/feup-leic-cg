@@ -53,8 +53,9 @@ export class MyScene extends CGFscene {
         this.score = 0;
         this._tickAccum = 0;
 
-        // delivery zone — circular drop spot in front of the barn; the ring
-        // highlights when the wagon enters it
+        // delivery zone — circular drop spot in front of the barn. Bales carried
+        // by the wagon are consumed the instant the wagon enters the disc.
+        this.hpPerBaleDelivery = 50;
         this.wagonInDeliveryZone = false;
 
         // hay bales scattered around the field; populated in init() once barn is placed
@@ -635,10 +636,19 @@ export class MyScene extends CGFscene {
 
     applyDelivery() {
         if (!this.deliveryZone || !this.wagon) return;
-        this.wagonInDeliveryZone = this.deliveryZone.contains(
-            this.wagon.position[0],
-            this.wagon.position[2]
-        );
+        const inside = this.deliveryZone.contains(this.wagon.position[0], this.wagon.position[2]);
+        // edge-detected: deliveries fire once per zone entry, not every frame inside
+        if (inside && !this.wagonInDeliveryZone) {
+            const carried = this.wagon.carriedBales;
+            if (carried && carried.length > 0) {
+                const restored = carried.length * this.hpPerBaleDelivery;
+                this.wagonHP = Math.min(this.maxHP, this.wagonHP + restored);
+                const deliveredSet = new Set(carried);
+                this.bales = this.bales.filter(b => !deliveredSet.has(b));
+                this.wagon.carriedBales = [];
+            }
+        }
+        this.wagonInDeliveryZone = inside;
     }
 
     handleHayBaleKeys() {
