@@ -97,8 +97,10 @@ void main() {
     }
     float edgeFade = 1.0 - smoothstep(uTerrainRadius * 0.85, uTerrainRadius, distFromCenter);
 
-    float tilingFactor = 40.0;
-    vec2 tiledUV = fract(vTextureCoord * tilingFactor);
+    // tile in world units rather than UV space so the texture scale is independent
+    // of the terrain disc size
+    float tilesPerWorldUnit = 1.0 / 12.0;
+    vec2 tiledUV = fract(vWorldPos.xz * tilesPerWorldUnit);
 
     vec4 grassColor  = texture2D(uGrassTexture,  tiledUV);
     vec4 dirtColor   = texture2D(uDirtTexture,   tiledUV);
