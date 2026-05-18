@@ -47,6 +47,10 @@ void main() {
     // skip fragments where terrain renders the wagon path
     if (pathMask(vWorldPos.xz) < 0.5) discard;
 
+    // also skip flower meadows so the 3D blades don't sprout through flower texture
+    float flowerNoise = noise(vWorldPos.xz * 0.05 + vec2(7.3, 2.1));
+    if (smoothstep(0.55, 0.78, flowerNoise) > 0.2) discard;
+
     vec3 baseColor = uGrassColor * 0.5;
     vec3 tipColor  = uGrassColor * 1.3;
 
