@@ -43,12 +43,25 @@ export class MyRockSet {
 
     _generatePlacements() {
         const placements = [];
+        let attempts = 0;
+        const maxAttempts = this.count * 40;
 
-        for (let i = 0; i < this.count; i++) {
+        while (placements.length < this.count && attempts < maxAttempts) {
+            const i = attempts;
+            attempts++;
+
             const angle = this._seededRandom(i * 5) * Math.PI * 2;
             const dist = Math.sqrt(this._seededRandom(i * 5 + 1)) * this.areaRadius * 0.85;
             const worldX = Math.cos(angle) * dist;
             const worldZ = Math.sin(angle) * dist;
+
+            // keep rocks off the dirt roads (mirrors terrain.frag's pathMask)
+            const c1 = 85.0 * Math.sin(worldZ * 0.0042 + 3.9)
+                     + 28.0 * Math.sin(worldZ * 0.013 + 5.4);
+            const c2 = -40.0 + 55.0 * Math.sin(worldX * 0.0048 + 4.7)
+                            + 22.0 * Math.sin(worldX * 0.011 + 1.3);
+            if (Math.abs(worldX - c1) < 8) continue;
+            if (Math.abs(worldZ - c2) < 8) continue;
 
             const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
 
