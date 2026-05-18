@@ -58,9 +58,9 @@ export class MyScene extends CGFscene {
         // arrows only float above bales the wagon is close to, so finding them feels earned
         this.baleArrowRange = 55.0;
 
-        // 45-degree side view: offsetX gives the side angle, Y and Z roughly equal
+        // default: directly behind the wagon. mouse X swings to either side.
         this.cameraFollow = true;
-        this.cameraOffsetX = 16.0;
+        this.cameraOffsetX = 0.0;
         this.cameraOffsetY = 8.0;
         this.cameraOffsetZ = 18.0;
         this.cameraTargetUp = 4.0;
@@ -69,8 +69,9 @@ export class MyScene extends CGFscene {
         this.cameraHeadingTau = 0.9;
         // smoothed heading the camera orbits around; matches wagon at rest
         this.cameraHeading = 0;
-        // mouse Y position (no drag) raises/lowers the target so the camera tilts up/down
+        // mouse position (no drag) tilts pitch (Y) and swings side-to-side (X)
         this.cameraPitchOffset = 0;
+        this.cameraSideOffset = 0;
     }
 
     init(application) {
@@ -94,7 +95,7 @@ export class MyScene extends CGFscene {
         this.hayBaleArrow = new MyHayBaleArrow(this);
         this.barn = new MyBarn(this);
         this.barnPos = { x: -20, z: -20 };
-        this.terrain = new MyTerrain(this, 96, 1200, 12, 42);
+        this.terrain = new MyTerrain(this, 128, 1600, 12, 42);
         this.bales = this._generateBales(22, 2024);
         this.rockSet = new MyRockSet(this, this.terrain, 95, 520, 123);
         this.flowerSet = new MyFlowerSet(this, this.terrain, 150, 500, 777);
@@ -156,8 +157,8 @@ export class MyScene extends CGFscene {
             uGrassTexture: 0,
             uDirtTexture: 1,
             uFlowerTexture: 2,
-            uTerrainSize: 1200.0,
-            uTerrainRadius: 595.0,
+            uTerrainSize: 1600.0,
+            uTerrainRadius: 795.0,
             uLightDir: this.sunDirection,
             uAmbientStrength: 0.18,
             uDiffuseStrength: 0.65,
@@ -438,8 +439,8 @@ export class MyScene extends CGFscene {
     _generateBales(count, seed) {
         const bales = [];
         const TWO_PI = Math.PI * 2;
-        const terrainSize = 1200;
-        const maxDist = 220;
+        const terrainSize = 1600;
+        const maxDist = 320;
         const minDist = 18;
 
         const hash = (n) => {
@@ -562,7 +563,7 @@ export class MyScene extends CGFscene {
         const cosH = Math.cos(this.cameraHeading);
         const sinH = Math.sin(this.cameraHeading);
 
-        const side = this.cameraOffsetX;
+        const side = this.cameraOffsetX + this.cameraSideOffset;
         const back = this.cameraOffsetZ;
 
         const desiredEyeX = w.position[0] + side * sinH - back * cosH;
@@ -851,16 +852,12 @@ export class MyScene extends CGFscene {
         this.gl.enable(this.gl.BLEND);
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
 
-        // recentre the panoramas on the camera so the wagon never reaches their edge
-        const camX = this.camera ? this.camera.position[0] : 0;
-        const camZ = this.camera ? this.camera.position[2] : 0;
-
         const hazeColor = this.getMountainHazeColor();
 
         this.setActiveShader(this.mountainShader);
 
         this.pushMatrix();
-        this.translate(camX, this.terrainYOffset - 44, camZ);
+        this.translate(0, this.terrainYOffset - 44, 0);
         this.mountainFarAppearance.apply();
         this.mountainFarTexture.bind(0);
         this.mountainShader.setUniformsValues({
@@ -876,7 +873,7 @@ export class MyScene extends CGFscene {
         this.popMatrix();
 
         this.pushMatrix();
-        this.translate(camX, this.terrainYOffset - 7, camZ);
+        this.translate(0, this.terrainYOffset - 7, 0);
         this.mountainAppearance.apply();
         this.mountainTexture.bind(0);
         this.mountainShader.setUniformsValues({
