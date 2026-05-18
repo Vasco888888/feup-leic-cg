@@ -75,7 +75,7 @@ export class MyGrassSet {
             const worldZ = Math.sin(angle) * dist;
 
             // mirror the dirt path mask from terrain.frag so grass keeps off the roads
-            const terrainSize = 1600;
+            const terrainSize = 3000;
             const TWO_PI = 6.2831;
             const u = worldX / terrainSize + 0.5;
             const v = worldZ / terrainSize + 0.5;

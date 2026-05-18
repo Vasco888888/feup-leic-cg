@@ -95,7 +95,7 @@ export class MyScene extends CGFscene {
         this.hayBaleArrow = new MyHayBaleArrow(this);
         this.barn = new MyBarn(this);
         this.barnPos = { x: -20, z: -20 };
-        this.terrain = new MyTerrain(this, 128, 1600, 12, 42);
+        this.terrain = new MyTerrain(this, 144, 3000, 12, 42);
         this.bales = this._generateBales(22, 2024);
         this.rockSet = new MyRockSet(this, this.terrain, 95, 520, 123);
         this.flowerSet = new MyFlowerSet(this, this.terrain, 150, 500, 777);
@@ -157,8 +157,8 @@ export class MyScene extends CGFscene {
             uGrassTexture: 0,
             uDirtTexture: 1,
             uFlowerTexture: 2,
-            uTerrainSize: 1600.0,
-            uTerrainRadius: 795.0,
+            uTerrainSize: 3000.0,
+            uTerrainRadius: 1495.0,
             uLightDir: this.sunDirection,
             uAmbientStrength: 0.18,
             uDiffuseStrength: 0.65,
@@ -439,8 +439,8 @@ export class MyScene extends CGFscene {
     _generateBales(count, seed) {
         const bales = [];
         const TWO_PI = Math.PI * 2;
-        const terrainSize = 1600;
-        const maxDist = 320;
+        const terrainSize = 3000;
+        const maxDist = 460;
         const minDist = 18;
 
         const hash = (n) => {
@@ -722,7 +722,7 @@ export class MyScene extends CGFscene {
         // sits just below the terrain base so it never z-fights
         this.translate(0, this.terrainYOffset - 0.02, 0);
         this.rotate(-Math.PI / 2, 1, 0, 0);
-        this.scale(1500, 1500, 1);
+        this.scale(3000, 3000, 1);
 
         this.floorAppearance.apply();
         this.floor.display();

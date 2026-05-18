@@ -27,7 +27,7 @@ float fbm(vec2 p) {
 }
 // keep this in sync with terrain.frag's pathMask
 float pathMask(vec2 worldXZ) {
-    vec2 uv = worldXZ / 1600.0 + 0.5;
+    vec2 uv = worldXZ / 3000.0 + 0.5;
 
     float c1 = 0.5 + 0.18 * sin(uv.y * 6.2831 * 1.2 + 0.8)
                    + 0.08 * sin(uv.y * 6.2831 * 2.7 + 2.1);
