@@ -47,6 +47,11 @@ export class MyScene extends CGFscene {
         this.wagonHP = this.maxHP;
         this.hpDecayPerSec = 1.0;
 
+        // score = whole seconds the wagon has stayed alive; freezes at HP 0.
+        // HP decay and score share one tick so the two readouts move in lockstep.
+        this.score = 0;
+        this._tickAccum = 0;
+
         // hay bales scattered around the field; populated in init() once barn is placed
         this.bales = [];
         // reach point sits ahead of the wagon centre (near the horse), with a
@@ -392,7 +397,14 @@ export class MyScene extends CGFscene {
         this.currentTime = t;
 
         if (dt > 0) {
-            this.wagonHP = Math.max(0, this.wagonHP - this.hpDecayPerSec * dt);
+            this._tickAccum += dt;
+            while (this._tickAccum >= 1) {
+                this._tickAccum -= 1;
+                if (this.wagonHP > 0) {
+                    this.wagonHP = Math.max(0, this.wagonHP - this.hpDecayPerSec);
+                    this.score += 1;
+                }
+            }
         }
 
         if (!this.pauseDayCycle) {
