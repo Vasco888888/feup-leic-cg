@@ -17,8 +17,8 @@ const REAR_WHEEL_SCALE = 1.2;
 const FRONT_WHEEL_RADIUS_WORLD = 0.5 * WAGON_SCALE;
 const REAR_WHEEL_RADIUS_WORLD = 0.5 * REAR_WHEEL_SCALE * WAGON_SCALE;
 
-// kinematics tuned for a horse walking pace
-const MAX_SPEED = 5.0;
+// kinematics tuned for a horse walking pace; maxSpeed is exposed on the instance
+const DEFAULT_MAX_SPEED = 5.0;
 const ACCELERATION = 2.0;
 const BRAKE_DECELERATION = 4.0;
 const FRICTION_DECELERATION = 0.8;
@@ -36,7 +36,7 @@ const HORSE_RADIUS = 1.8;
 const KINGPIN_WORLD_X = FRONT_WHEEL_OFFSET_X * WAGON_SCALE;
 const HORSE_FROM_KINGPIN = 2.0 * WAGON_SCALE;
 // stay clear of the terrain edge
-const WORLD_RADIUS = 580;
+const WORLD_RADIUS = 500;
 
 export class MyWagon extends CGFobject {
     constructor(scene) {
@@ -63,6 +63,7 @@ export class MyWagon extends CGFobject {
         this.heading = 0;
         this.speed = 0;
         this.steering = 0;
+        this.maxSpeed = DEFAULT_MAX_SPEED;
 
         // accumulated rolling angles (radians)
         this.frontSpin = 0;
@@ -75,6 +76,11 @@ export class MyWagon extends CGFobject {
         // hay-bale carrying slots — holds references to scene bale entries
         this.carriedBales = [];
         this.maxBales = 2;
+
+        // damaging-collider edge detection: IDs we're pressed against right now,
+        // and IDs that became active this frame (consumed by the scene as damage)
+        this.activeCollisionIds = new Set();
+        this.newCollisionIds = [];
     }
 
     update(dtSeconds, colliders = []) {
@@ -96,7 +102,7 @@ export class MyWagon extends CGFobject {
             this.speed -= FRICTION_DECELERATION * dtSeconds;
         }
         if (this.speed < 0) this.speed = 0;          // no reverse
-        if (this.speed > MAX_SPEED) this.speed = MAX_SPEED;
+        if (this.speed > this.maxSpeed) this.speed = this.maxSpeed;
 
         // steering: gradual towards max, springs back when no key is held
         if (aPressed && !dPressed) {
@@ -127,6 +133,7 @@ export class MyWagon extends CGFobject {
         // resolve obstacle penetration: every collision point along the rig is tested,
         // and overlaps push the wagon centre back out along the contact normal
         let hit = false;
+        const touchedThisFrame = new Set();
         const cosH = Math.cos(this.heading);
         const sinH = Math.sin(this.heading);
         const cosS = Math.cos(this.steering);
@@ -160,6 +167,7 @@ export class MyWagon extends CGFobject {
                     newX += (dx / d) * push;
                     newZ += (dz / d) * push;
                     hit = true;
+                    if (c.damageOnHit && c.id) touchedThisFrame.add(c.id);
                 }
             }
         }
@@ -177,6 +185,14 @@ export class MyWagon extends CGFobject {
 
         // running into something bleeds off momentum so we don't grind against the wall
         if (hit) this.speed *= 0.2;
+
+        // expose IDs that became active this frame so the gameplay layer can
+        // apply impact damage exactly once per contact event
+        this.newCollisionIds = [];
+        for (const id of touchedThisFrame) {
+            if (!this.activeCollisionIds.has(id)) this.newCollisionIds.push(id);
+        }
+        this.activeCollisionIds = touchedThisFrame;
 
         // wheel rolling — front wheels are smaller so they spin faster
         this.frontSpin += dist / FRONT_WHEEL_RADIUS_WORLD;

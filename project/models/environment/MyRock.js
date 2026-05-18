@@ -1,103 +1,82 @@
 import { CGFobject } from "../../../lib/CGF.js";
 
 /**
- * Sphere with seeded fbm vertex displacement that gives each rock a unique shape.
+ * Angular rock: icosahedron with per-vertex random displacement and flat
+ * shading. Each of the 20 faces reads as its own planar facet.
  */
 export class MyRock extends CGFobject {
-    constructor(scene, slices = 12, stacks = 8, seed = 0, perturbation = 0.25) {
+    constructor(scene, seed = 0, perturbation = 0.35) {
         super(scene);
-        this.slices = slices;
-        this.stacks = stacks;
         this.seed = seed;
         this.perturbation = perturbation;
         this.initBuffers();
     }
 
-    _hash(x, y) {
-        let h = (x * 374761393 + y * 668265263 + this.seed * 1013) | 0;
+    _rand(i) {
+        let h = (i * 374761393 + this.seed * 668265263) | 0;
         h = Math.imul(h ^ (h >>> 13), 1274126177);
-        h = h ^ (h >>> 16);
-        return (h & 0x7fffffff) / 0x7fffffff;
-    }
-
-    _noise2D(x, y) {
-        const ix = Math.floor(x);
-        const iy = Math.floor(y);
-        const fx = x - ix;
-        const fy = y - iy;
-        const sx = fx * fx * (3 - 2 * fx);
-        const sy = fy * fy * (3 - 2 * fy);
-
-        const n00 = this._hash(ix, iy);
-        const n10 = this._hash(ix + 1, iy);
-        const n01 = this._hash(ix, iy + 1);
-        const n11 = this._hash(ix + 1, iy + 1);
-
-        const nx0 = n00 + (n10 - n00) * sx;
-        const nx1 = n01 + (n11 - n01) * sx;
-        return nx0 + (nx1 - nx0) * sy;
-    }
-
-    _fbm(x, y) {
-        let value = 0, amp = 1, freq = 2.0, maxAmp = 0;
-        for (let i = 0; i < 3; i++) {
-            value += this._noise2D(x * freq, y * freq) * amp;
-            maxAmp += amp;
-            amp *= 0.5;
-            freq *= 2.0;
-        }
-        return value / maxAmp;
+        return ((h ^ (h >>> 16)) & 0x7fffffff) / 0x7fffffff;
     }
 
     initBuffers() {
+        const t = (1 + Math.sqrt(5)) / 2;
+        const baseVerts = [
+            [-1,  t,  0], [ 1,  t,  0], [-1, -t,  0], [ 1, -t,  0],
+            [ 0, -1,  t], [ 0,  1,  t], [ 0, -1, -t], [ 0,  1, -t],
+            [ t,  0, -1], [ t,  0,  1], [-t,  0, -1], [-t,  0,  1],
+        ].map((v) => {
+            const l = Math.hypot(v[0], v[1], v[2]);
+            return [v[0] / l, v[1] / l, v[2] / l];
+        });
+        const faces = [
+            [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
+            [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
+            [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
+            [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1],
+        ];
+
+        // squash on Y so rocks read as flat-bottomed boulders
+        const flattenY = 0.55 + this._rand(7) * 0.3;
+
+        // displace each unique vertex once so shared edges stay sealed
+        const verts = baseVerts.map((v, i) => {
+            const d = 1 + (this._rand(i + 1) - 0.5) * 2 * this.perturbation;
+            return [v[0] * d, v[1] * d * flattenY, v[2] * d];
+        });
+
         this.vertices = [];
         this.normals = [];
         this.texCoords = [];
         this.indices = [];
 
-        for (let stack = 0; stack <= this.stacks; stack++) {
-            const v = stack / this.stacks;
-            const theta = v * Math.PI;
-            const cosTheta = Math.cos(theta);
-            const sinTheta = Math.sin(theta);
+        let idx = 0;
+        for (const [a, b, c] of faces) {
+            const pa = verts[a], pb = verts[b], pc = verts[c];
 
-            for (let slice = 0; slice <= this.slices; slice++) {
-                const u = slice / this.slices;
-                const phi = u * 2 * Math.PI;
-                const cosPhi = Math.cos(phi);
-                const sinPhi = Math.sin(phi);
+            // face normal from the displaced triangle edges
+            const ex = pb[0] - pa[0], ey = pb[1] - pa[1], ez = pb[2] - pa[2];
+            const fx = pc[0] - pa[0], fy = pc[1] - pa[1], fz = pc[2] - pa[2];
+            let nx = ey * fz - ez * fy;
+            let ny = ez * fx - ex * fz;
+            let nz = ex * fy - ey * fx;
+            const nl = Math.hypot(nx, ny, nz) || 1;
+            nx /= nl; ny /= nl; nz /= nl;
 
-                let nx = sinTheta * cosPhi;
-                let ny = cosTheta;
-                let nz = sinTheta * sinPhi;
+            // planar UVs on the face's dominant axis — texture stays undistorted per facet
+            const ax = Math.abs(nx), ay = Math.abs(ny), az = Math.abs(nz);
+            const uv = (p) =>
+                ay >= ax && ay >= az ? [p[0] * 0.5 + 0.5, p[2] * 0.5 + 0.5] :
+                ax >= az              ? [p[2] * 0.5 + 0.5, p[1] * 0.5 + 0.5] :
+                                        [p[0] * 0.5 + 0.5, p[1] * 0.5 + 0.5];
 
-                const noiseVal = this._fbm(u * 5 + this.seed, v * 5);
-                const displacement = 1.0 + (noiseVal - 0.5) * 2.0 * this.perturbation;
-
-                // squash y so rocks read as boulders rather than spheres
-                const flattenY = 0.6 + this._hash(this.seed, this.seed + 7) * 0.3;
-
-                const x = nx * displacement;
-                const y = ny * displacement * flattenY;
-                const z = nz * displacement;
-
-                this.vertices.push(x, y, z);
-
-                // sphere normal is close enough once displacement is small
+            for (const p of [pa, pb, pc]) {
+                const [u, w] = uv(p);
+                this.vertices.push(p[0], p[1], p[2]);
                 this.normals.push(nx, ny, nz);
-
-                this.texCoords.push(u, v);
+                this.texCoords.push(u, w);
             }
-        }
-
-        for (let stack = 0; stack < this.stacks; stack++) {
-            for (let slice = 0; slice < this.slices; slice++) {
-                const first = stack * (this.slices + 1) + slice;
-                const second = first + this.slices + 1;
-
-                this.indices.push(first, second, first + 1);
-                this.indices.push(second, second + 1, first + 1);
-            }
+            this.indices.push(idx, idx + 1, idx + 2);
+            idx += 3;
         }
 
         this.primitiveType = this.scene.gl.TRIANGLES;

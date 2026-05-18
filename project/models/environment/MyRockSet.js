@@ -14,12 +14,10 @@ export class MyRockSet {
 
         // shared pool: every placement reuses one of these geometries
         this.rockShapes = [];
-        const numShapes = 5;
+        const numShapes = 6;
         for (let i = 0; i < numShapes; i++) {
-            const slices = 10 + Math.floor(this._seededRandom(i * 3) * 6);
-            const stacks = 6 + Math.floor(this._seededRandom(i * 3 + 1) * 4);
-            const perturbation = 0.15 + this._seededRandom(i * 3 + 2) * 0.25;
-            this.rockShapes.push(new MyRock(scene, slices, stacks, i * 17, perturbation));
+            const perturbation = 0.28 + this._seededRandom(i * 3 + 2) * 0.3;
+            this.rockShapes.push(new MyRock(scene, i * 17, perturbation));
         }
 
         this.rockTextures = [
@@ -45,18 +43,31 @@ export class MyRockSet {
 
     _generatePlacements() {
         const placements = [];
+        let attempts = 0;
+        const maxAttempts = this.count * 40;
 
-        for (let i = 0; i < this.count; i++) {
+        while (placements.length < this.count && attempts < maxAttempts) {
+            const i = attempts;
+            attempts++;
+
             const angle = this._seededRandom(i * 5) * Math.PI * 2;
             const dist = Math.sqrt(this._seededRandom(i * 5 + 1)) * this.areaRadius * 0.85;
             const worldX = Math.cos(angle) * dist;
             const worldZ = Math.sin(angle) * dist;
 
+            // keep rocks off the dirt roads (mirrors terrain.frag's pathMask)
+            const c1 = 85.0 * Math.sin(worldZ * 0.0042 + 3.9)
+                     + 28.0 * Math.sin(worldZ * 0.013 + 5.4);
+            const c2 = -40.0 + 55.0 * Math.sin(worldX * 0.0048 + 4.7)
+                            + 22.0 * Math.sin(worldX * 0.011 + 1.3);
+            if (Math.abs(worldX - c1) < 8) continue;
+            if (Math.abs(worldZ - c2) < 8) continue;
+
             const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
 
             const baseScale = 0.8 + this._seededRandom(i * 5 + 2) * 2.5;
             const scaleX = baseScale * (0.8 + this._seededRandom(i * 7) * 0.4);
-            const scaleY = baseScale * (0.5 + this._seededRandom(i * 7 + 1) * 0.4);
+            const scaleY = baseScale * (0.8 + this._seededRandom(i * 7 + 1) * 0.5);
             const scaleZ = baseScale * (0.8 + this._seededRandom(i * 7 + 2) * 0.4);
 
             const rotY = this._seededRandom(i * 5 + 3) * Math.PI * 2;
@@ -77,21 +88,27 @@ export class MyRockSet {
     }
 
     getColliders() {
-        // approximate each rock as a circle in the XZ plane for wagon collision
+        // approximate each rock as a circle in the XZ plane for wagon collision.
+        // id is stable per placement so the wagon can edge-detect new hits and
+        // damageOnHit flags this collider class as gameplay-damaging.
         const colliders = [];
-        for (const r of this.placements) {
+        for (let i = 0; i < this.placements.length; i++) {
+            const r = this.placements[i];
             const radius = Math.max(r.scaleX, r.scaleZ) * 0.7;
             if (radius > 0.3) {
-                colliders.push({ x: r.x, z: r.z, radius });
+                colliders.push({
+                    x: r.x,
+                    z: r.z,
+                    radius,
+                    id: `rock-${i}`,
+                    damageOnHit: true,
+                });
             }
         }
         return colliders;
     }
 
     display() {
-        // vertex perturbation can flip winding, so culling stays off
-        this.scene.gl.disable(this.scene.gl.CULL_FACE);
-
         const cam = this.scene.camera;
         const camX = cam ? cam.position[0] : 0;
         const camZ = cam ? cam.position[2] : 0;
@@ -116,7 +133,5 @@ export class MyRockSet {
 
             this.scene.popMatrix();
         }
-
-        this.scene.gl.enable(this.scene.gl.CULL_FACE);
     }
 }

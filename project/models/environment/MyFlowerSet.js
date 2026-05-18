@@ -109,6 +109,14 @@ export class MyFlowerSet {
             const scale = 0.6 + this._seededRandom(i * 4 + 2) * 1.0;
             const flowerRadius = scale * 0.5;
 
+            // keep flowers off the dirt roads
+            const c1 = 85.0 * Math.sin(worldZ * 0.0042 + 3.9)
+                     + 28.0 * Math.sin(worldZ * 0.013 + 5.4);
+            const c2 = -40.0 + 55.0 * Math.sin(worldX * 0.0048 + 4.7)
+                            + 22.0 * Math.sin(worldX * 0.011 + 1.3);
+            if (Math.abs(worldX - c1) < 8) continue;
+            if (Math.abs(worldZ - c2) < 8) continue;
+
             if (this._collidesWithObstacles(worldX, worldZ, flowerRadius, obstacles)) continue;
 
             const worldY = this.terrain.getTerrainHeight(worldX, worldZ);

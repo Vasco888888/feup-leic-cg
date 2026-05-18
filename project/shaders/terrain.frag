@@ -62,29 +62,28 @@ float fbm(vec2 p) {
     return value;
 }
 
-// wagon path mask: union of several winding roads so the dirt branches
+// wagon path mask: union of winding roads measured in world units so the width
+// stays fixed even if the terrain disc scales up
 float pathMask(vec2 worldXZ) {
-    vec2 uv = worldXZ / uTerrainSize + 0.5;
-
-    // main winding road running roughly north-south
-    float c1 = 0.5 + 0.18 * sin(uv.y * 6.2831 * 1.2 + 0.8)
-                   + 0.08 * sin(uv.y * 6.2831 * 2.7 + 2.1);
-    float d1 = abs(uv.x - c1);
+    // main winding north-south road
+    float c1 = 85.0 * sin(worldXZ.y * 0.0042 + 3.9)
+             + 28.0 * sin(worldXZ.y * 0.013 + 5.4);
+    float d1 = abs(worldXZ.x - c1);
 
     // east-west crossroad weaving across the field
-    float c2 = 0.5 + 0.16 * sin(uv.x * 6.2831 * 1.0 + 1.6)
-                   + 0.07 * sin(uv.x * 6.2831 * 2.4 + 4.3);
-    float d2 = abs(uv.y - c2);
+    float c2 = -40.0 + 55.0 * sin(worldXZ.x * 0.0048 + 4.7)
+                    + 22.0 * sin(worldXZ.x * 0.011 + 1.3);
+    float d2 = abs(worldXZ.y - c2);
 
-    // short spur curling off the main road in the lower half
-    float c3 = 0.32 + 0.12 * sin(uv.y * 6.2831 * 1.6 + 2.4);
-    float spurGate = smoothstep(0.28, 0.40, uv.y) * (1.0 - smoothstep(0.62, 0.78, uv.y));
-    float d3 = mix(1.0, abs(uv.x - c3), spurGate);
+    // shorter spur curling off the main road in the upper half of the map
+    float c3 = 220.0 + 50.0 * sin(worldXZ.y * 0.0065 + 3.7);
+    float spurGate = smoothstep(60.0, 220.0, worldXZ.y) * (1.0 - smoothstep(540.0, 760.0, worldXZ.y));
+    float d3 = mix(1e6, abs(worldXZ.x - c3), spurGate);
 
     float dist = min(min(d1, d2), d3);
 
-    float pathWidth = 0.022;
-    float pathEdge  = 0.012;
+    float pathWidth = 5.0;
+    float pathEdge  = 2.5;
 
     return smoothstep(pathWidth - pathEdge, pathWidth + pathEdge, dist);
 }
@@ -97,14 +96,19 @@ void main() {
     }
     float edgeFade = 1.0 - smoothstep(uTerrainRadius * 0.85, uTerrainRadius, distFromCenter);
 
-    float tilingFactor = 40.0;
-    vec2 tiledUV = fract(vTextureCoord * tilingFactor);
+    // tile in world units rather than UV space so the texture scale is independent
+    // of the terrain disc size
+    float tilesPerWorldUnit = 1.0 / 12.0;
+    vec2 tiledUV = fract(vWorldPos.xz * tilesPerWorldUnit);
 
     vec4 grassColor  = texture2D(uGrassTexture,  tiledUV);
     vec4 dirtColor   = texture2D(uDirtTexture,   tiledUV);
+    vec4 flowerColor = texture2D(uFlowerTexture, tiledUV);
 
-    // tone the ground grass down so the 3D blades pop against it
-    grassColor.rgb *= 0.72;
+    // tone the ground grass down so the 3D blades pop against it;
+    // the flower texture sits on grass too, so match its brightness
+    grassColor.rgb  *= 0.72;
+    flowerColor.rgb *= 0.72;
 
     float slope = 1.0 - dot(normalize(vNormal), vec3(0.0, 1.0, 0.0));
     float slopeDirt = smoothstep(0.25, 0.55, slope);
@@ -113,7 +117,13 @@ void main() {
     float pathGrass = pathMask(vWorldPos.xz);
     float dirtFactor = max(slopeDirt, 1.0 - pathGrass);
 
-    vec4 groundColor = mix(grassColor, dirtColor, clamp(dirtFactor, 0.0, 1.0));
+    // cheap single-octave noise picks scattered flower meadows on flat grass
+    float flowerNoise = noise(vWorldPos.xz * 0.05 + vec2(7.3, 2.1));
+    float slopeFlat = 1.0 - smoothstep(0.08, 0.25, slope);
+    float flowerMask = smoothstep(0.55, 0.78, flowerNoise) * slopeFlat * pathGrass * (1.0 - dirtFactor);
+
+    vec4 groundColor = mix(grassColor, flowerColor, clamp(flowerMask, 0.0, 1.0));
+    groundColor = mix(groundColor, dirtColor, clamp(dirtFactor, 0.0, 1.0));
 
     vec3 edgeColor = vec3(0.28, 0.42, 0.18);
     groundColor.rgb = mix(edgeColor, groundColor.rgb, edgeFade);
