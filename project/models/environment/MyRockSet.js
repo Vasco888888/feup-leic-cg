@@ -12,14 +12,15 @@ export class MyRockSet {
         this.areaRadius = areaRadius;
         this.seed = seed;
 
-        // shared pool: every placement reuses one of these geometries
+        // shared pool: every placement reuses one of these geometries.
+        // mix 0-subdiv (20 faces, very crystalline) and 1-subdiv (80 faces, chunkier)
+        // so the scatter has a range of sizes and silhouettes.
         this.rockShapes = [];
-        const numShapes = 5;
+        const numShapes = 6;
         for (let i = 0; i < numShapes; i++) {
-            const slices = 10 + Math.floor(this._seededRandom(i * 3) * 6);
-            const stacks = 6 + Math.floor(this._seededRandom(i * 3 + 1) * 4);
-            const perturbation = 0.15 + this._seededRandom(i * 3 + 2) * 0.25;
-            this.rockShapes.push(new MyRock(scene, slices, stacks, i * 17, perturbation));
+            const subdivisions = this._seededRandom(i * 3) < 0.6 ? 0 : 1;
+            const perturbation = 0.28 + this._seededRandom(i * 3 + 2) * 0.3;
+            this.rockShapes.push(new MyRock(scene, subdivisions, i * 17, perturbation));
         }
 
         this.rockTextures = [
@@ -56,7 +57,7 @@ export class MyRockSet {
 
             const baseScale = 0.8 + this._seededRandom(i * 5 + 2) * 2.5;
             const scaleX = baseScale * (0.8 + this._seededRandom(i * 7) * 0.4);
-            const scaleY = baseScale * (0.5 + this._seededRandom(i * 7 + 1) * 0.4);
+            const scaleY = baseScale * (0.8 + this._seededRandom(i * 7 + 1) * 0.5);
             const scaleZ = baseScale * (0.8 + this._seededRandom(i * 7 + 2) * 0.4);
 
             const rotY = this._seededRandom(i * 5 + 3) * Math.PI * 2;
