@@ -851,12 +851,16 @@ export class MyScene extends CGFscene {
         this.gl.enable(this.gl.BLEND);
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
 
+        // recentre the panoramas on the camera so the wagon never reaches their edge
+        const camX = this.camera ? this.camera.position[0] : 0;
+        const camZ = this.camera ? this.camera.position[2] : 0;
+
         const hazeColor = this.getMountainHazeColor();
 
         this.setActiveShader(this.mountainShader);
 
         this.pushMatrix();
-        this.translate(0, this.terrainYOffset - 44, 0);
+        this.translate(camX, this.terrainYOffset - 44, camZ);
         this.mountainFarAppearance.apply();
         this.mountainFarTexture.bind(0);
         this.mountainShader.setUniformsValues({
@@ -872,7 +876,7 @@ export class MyScene extends CGFscene {
         this.popMatrix();
 
         this.pushMatrix();
-        this.translate(0, this.terrainYOffset - 7, 0);
+        this.translate(camX, this.terrainYOffset - 7, camZ);
         this.mountainAppearance.apply();
         this.mountainTexture.bind(0);
         this.mountainShader.setUniformsValues({
