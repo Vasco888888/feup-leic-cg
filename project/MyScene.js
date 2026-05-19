@@ -55,7 +55,7 @@ export class MyScene extends CGFscene {
 
         // delivery zone — circular drop spot in front of the barn. Bales carried
         // by the wagon are consumed the instant the wagon enters the disc.
-        this.hpPerBaleDelivery = 50;
+        this.hpPerBaleDelivery = 20;
         this.wagonInDeliveryZone = false;
         this.balesDelivered = 0;
 
