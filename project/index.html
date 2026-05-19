@@ -99,6 +99,75 @@
             0 5px 10px rgba(0, 0, 0, 0.40); }
         .hud-score { padding: 12px 28px; }
         .hud-score .hud-value { color: #f7d27a; font-size: 26px; }
+
+        /* Main menu overlay — blurs the (frozen) game behind, sits above the HUD */
+        #menu {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(7px) saturate(0.85);
+            -webkit-backdrop-filter: blur(7px) saturate(0.85);
+            background: rgba(20, 12, 4, 0.32);
+            font-family: "Georgia", "Bookman Old Style", "Palatino Linotype", serif;
+            user-select: none;
+        }
+
+        #menu.hidden { display: none; }
+
+        .menu-logo {
+            max-width: 70vw;
+            max-height: 52vh;
+            margin-top: -6vh;
+            filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.55));
+            pointer-events: none;
+        }
+
+        #menu-play {
+            margin-top: 5vh;
+            font-family: inherit;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: #faecca;
+            padding: 16px 64px;
+            border: 3px solid #2a1a0a;
+            border-radius: 8px;
+            background:
+                repeating-linear-gradient(
+                    90deg,
+                    rgba(0, 0, 0, 0.18) 0,
+                    rgba(0, 0, 0, 0.18) 1px,
+                    transparent 1px,
+                    transparent 28px
+                ),
+                linear-gradient(180deg, #5b3d22 0%, #3b2410 100%);
+            box-shadow:
+                inset 5px 0 0 #c98a2a,
+                inset 0 1px 0 rgba(255, 215, 150, 0.22),
+                inset 0 -3px 6px rgba(0, 0, 0, 0.55),
+                0 6px 14px rgba(0, 0, 0, 0.45);
+            text-shadow: 1px 2px 0 rgba(0, 0, 0, 0.65);
+            cursor: pointer;
+            transition: transform 0.06s ease-out, filter 0.12s ease-out;
+        }
+
+        #menu-play:hover {
+            filter: brightness(1.12);
+        }
+
+        #menu-play:active {
+            transform: translateY(2px);
+            box-shadow:
+                inset 5px 0 0 #c98a2a,
+                inset 0 1px 0 rgba(255, 215, 150, 0.22),
+                inset 0 -3px 6px rgba(0, 0, 0, 0.55),
+                0 2px 6px rgba(0, 0, 0, 0.45);
+        }
     </style>
 </head>
 <body>
@@ -119,6 +188,10 @@
                 <span class="hud-value" id="hud-score-value">0</span>
             </div>
         </div>
+    </div>
+    <div id="menu">
+        <img class="menu-logo" src="logo.png" alt="Return to the Barn">
+        <button id="menu-play" type="button">Play</button>
     </div>
     <script type="module" src="main.js"></script>
 </body>

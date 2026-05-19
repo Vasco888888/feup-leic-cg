@@ -43,6 +43,10 @@ export class MyScene extends CGFscene {
         // wagon physics needs a real dt between frames
         this.lastUpdateTime = null;
 
+        // 'menu' on boot and after the wagon hits 0 HP; 'playing' once Play is clicked.
+        // Gameplay updates are gated on this so the world stays frozen under the menu.
+        this.gameState = 'menu';
+
         // gameplay HP economy — spec reference values, tune as needed
         this.maxHP = 100;
         this.wagonHP = this.maxHP;
@@ -210,6 +214,8 @@ export class MyScene extends CGFscene {
             uPanoramaHeight: 1.0,
             uSunInfluence: 1.0
         });
+
+        this._initMenu();
 
         this.setUpdatePeriod(50);
     }
@@ -405,7 +411,9 @@ export class MyScene extends CGFscene {
         this.lastUpdateTime = t;
         this.currentTime = t;
 
-        if (dt > 0) {
+        const playing = this.gameState === 'playing';
+
+        if (playing && dt > 0) {
             this._tickAccum += dt;
             while (this._tickAccum >= 1) {
                 this._tickAccum -= 1;
@@ -430,7 +438,10 @@ export class MyScene extends CGFscene {
             -this.sunDirection[2]
         );
 
-        this.cloudOffset = ((t / 1000.0) * this.cloudSpeed) % 1000.0;
+        // clouds and grass are time-driven — freeze them with the rest of the world while menu is up
+        if (playing) {
+            this.cloudOffset = ((t / 1000.0) * this.cloudSpeed) % 1000.0;
+        }
 
         this.skyShader.setUniformsValues({
             uSunDirection: this.sunDirection,
@@ -439,9 +450,11 @@ export class MyScene extends CGFscene {
 
         this.applyDynamicLighting();
 
-        this.grassSet.update(t, this.sunInfluence);
+        if (playing) {
+            this.grassSet.update(t, this.sunInfluence);
+        }
 
-        if (this.wagon && dt > 0) {
+        if (playing && this.wagon && dt > 0) {
             this.wagon.update(dt, this.getColliders());
             // wheels need to ride on the terrain, not the abstract plane at Y=0
             this.wagon.position[1] = this.terrain.getTerrainHeight(
@@ -457,6 +470,11 @@ export class MyScene extends CGFscene {
 
         this.updateTerrainEnvironment();
         this.updateHUD();
+
+        // bounce back to menu the moment the wagon dies (HUD already shows the final HP=0 + score)
+        if (playing && this.wagonHP <= 0) {
+            this.showMenu();
+        }
     }
 
     updateHUD() {
@@ -472,6 +490,63 @@ export class MyScene extends CGFscene {
         if (this._hudElems.hp) this._hudElems.hp.textContent = Math.round(this.wagonHP);
         if (this._hudElems.score) this._hudElems.score.textContent = this.score;
         if (this._hudElems.bales) this._hudElems.bales.textContent = this.balesDelivered;
+    }
+
+    _initMenu() {
+        this._menuEl = document.getElementById("menu");
+        const playBtn = document.getElementById("menu-play");
+        if (playBtn) playBtn.addEventListener("click", () => this.startGame());
+        // first frame opens on the menu; nothing to toggle here
+    }
+
+    showMenu() {
+        this.gameState = 'menu';
+        if (this._menuEl) this._menuEl.classList.remove("hidden");
+    }
+
+    startGame() {
+        // wipe the previous run's state so a Play after game-over starts clean
+        this.wagonHP = this.maxHP;
+        this.score = 0;
+        this.balesDelivered = 0;
+        this._tickAccum = 0;
+        this.wagonInDeliveryZone = false;
+        this.prevPickupKey = false;
+        this.prevDropKey = false;
+
+        this.bales = this._generateBales(22, 2024);
+
+        if (this.wagon) {
+            this.wagon.position[0] = 0;
+            this.wagon.position[1] = this.terrain ? this.terrain.getTerrainHeight(0, 0) : 0;
+            this.wagon.position[2] = 0;
+            this.wagon.heading = 0;
+            this.wagon.speed = 0;
+            this.wagon.pitch = 0;
+            this.wagon.roll = 0;
+            this.wagon.frontSpin = 0;
+            this.wagon.rearSpin = 0;
+            this.wagon.carriedBales = [];
+            this.wagon.activeCollisionIds = new Set();
+            this.wagon.newCollisionIds = [];
+        }
+
+        // snap the chase camera straight behind the wagon so it doesn't fly back from the death spot
+        if (this.camera) {
+            const spawnY = this.terrain ? this.terrain.getTerrainHeight(0, 0) : 0;
+            this.cameraHeading = 0;
+            this.cameraPitchOffset = 0;
+            this.cameraSideOffset = 0;
+            this.camera.position[0] = -this.cameraOffsetZ;
+            this.camera.position[1] = spawnY + this.cameraOffsetY;
+            this.camera.position[2] = 0;
+            this.camera.target[0] = 0;
+            this.camera.target[1] = spawnY + this.cameraTargetUp;
+            this.camera.target[2] = 0;
+        }
+
+        if (this._menuEl) this._menuEl.classList.add("hidden");
+        this.gameState = 'playing';
     }
 
     _generateBales(count, seed) {
