@@ -60,7 +60,7 @@ export class MyHayBaleArrow extends CGFobject {
         this.initGLBuffers();
     }
 
-    // legacy single-arrow path (kept for completeness; scene prefers the batched API)
+    // single-arrow path; the scene uses beginBatch/drawInstance/endBatch instead
     display() {
         const gl = this.scene.gl;
         this.beginBatch();

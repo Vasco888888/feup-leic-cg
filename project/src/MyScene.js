@@ -405,7 +405,10 @@ export class MyScene extends CGFscene {
         this.popMatrix();
 
         this.pushMatrix();
-        this.translate(this.barnPos.x, this.terrainYOffset, this.barnPos.z);
+        // sit the barn on the terrain at its centre; MyBarn sinks itself a bit
+        // more to keep the foundation embedded as the terrain undulates
+        const barnY = this.terrain ? this.terrain.getTerrainHeight(this.barnPos.x, this.barnPos.z) : 0;
+        this.translate(this.barnPos.x, this.terrainYOffset + barnY, this.barnPos.z);
         this.barn.display();
         this.popMatrix();
 

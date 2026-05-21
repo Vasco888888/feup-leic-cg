@@ -1,21 +1,20 @@
 import { CGFobject, CGFappearance, CGFtexture } from '../../../../lib/CGF.js';
 
-// Barn body sits on a low stone plinth; gable roof has a 1-unit overhang past
-// the walls. Front face carries the big sliding door and a hayloft door above.
-// Two silos with metal bodies and dark conical caps sit to the left.
-// Silos expose collider footprints via getColliders() so MyScene can add them
-// to the wagon's collision list.
+// Barn body sits on a stone plinth; gable roof has no overhang and the
+// front/back gable triangles reuse the wall material so the wood siding runs
+// continuously from the foundation up to the peak. Front face carries the big
+// sliding door and a hayloft door above. Two silos with corrugated bodies and
+// dark conical caps sit to the left. Silos expose collider footprints via
+// getColliders() so MyScene can add them to the wagon's collision list.
 
 // Layout (barn-local coords; +z is the front facing the delivery zone)
 const FOUNDATION_HEIGHT = 1.5;
-const FOUNDATION_HALF   = 5.6; // 11.2 wide, sticks out past the 10x10 body
+const FOUNDATION_HALF   = 5.6;
 const BODY_W = 10;
 const BODY_D = 10;
 const BODY_H = 8;
 const BODY_TOP = FOUNDATION_HEIGHT + BODY_H;     // y = 9.5
 const ROOF_PEAK_H = 4;
-// roof base flush with the walls — overhangs exposed the slant underside,
-// which read as "you can see inside the roof" from low viewing angles
 const ROOF_HALF_W = 5;
 const ROOF_HALF_D = 5;
 
@@ -36,6 +35,8 @@ export class MyBarn extends CGFobject {
         this.wallMaterial.setShininess(5.0);
         this.wallTexture = new CGFtexture(scene, "textures/props/barn/reclaimed_wood_planks_sundance_red_finish_wall.jpg");
         this.wallMaterial.setTexture(this.wallTexture);
+        // gables sample beyond v=1 to tile the planks up to the peak
+        this.wallMaterial.setTextureWrap('REPEAT', 'REPEAT');
 
         this.doorMaterial = new CGFappearance(scene);
         this.doorMaterial.setAmbient(0.22, 0.22, 0.22, 1.0);
@@ -71,8 +72,6 @@ export class MyBarn extends CGFobject {
         this.siloMaterial.setTexture(this.siloTexture);
         this.siloMaterial.setTextureWrap('REPEAT', 'REPEAT');
 
-        // silo caps reuse the main roof shingle texture so the roof line reads
-        // as a single material across the building and the silos
         this.capMaterial = new CGFappearance(scene);
         this.capMaterial.setAmbient(0.20, 0.20, 0.20, 1.0);
         this.capMaterial.setDiffuse(1.0, 1.0, 1.0, 1.0);
@@ -92,26 +91,41 @@ export class MyBarn extends CGFobject {
 
     initBuffers() {
         this.quad = new MyBarnQuad(this.scene);
-        this.roofPart = new MyBarnRoof(this.scene, ROOF_HALF_W, ROOF_PEAK_H, ROOF_HALF_D);
+        // foundation face is 11.2 wide x 1.5 tall — tile so stones don't smear
+        // horizontally; top is 11.2x11.2 so it tiles in both directions
+        this.stoneSideQuad = new MyTexQuad(this.scene, 6, 1);
+        this.stoneTopQuad  = new MyTexQuad(this.scene, 6, 6);
+        this.slants = new MyBarnSlants(this.scene, ROOF_HALF_W, ROOF_PEAK_H, ROOF_HALF_D);
+        this.gables = new MyBarnGables(this.scene, ROOF_HALF_W, ROOF_PEAK_H, ROOF_HALF_D);
         this.cylinder = new MyBarnCylinder(this.scene, 24);
         this.cone = new MyBarnCone(this.scene, 24);
     }
 
-    // worldless silo footprints so MyScene can append them to wagon colliders
     getColliders() {
         return SILOS.map(s => ({ localX: s.x, localZ: s.z, radius: s.r + 0.2 }));
     }
 
     display() {
-        // stone foundation — slightly wider than the body, short and squat
+        // sink the whole barn slightly into the ground so the foundation
+        // reads as embedded instead of floating on the grass
+        this.scene.pushMatrix();
+        this.scene.translate(0, -0.3, 0);
+
+        // stone foundation
         this.stoneMaterial.apply();
-        this._drawBox(0, FOUNDATION_HEIGHT / 2, 0, FOUNDATION_HALF * 2, FOUNDATION_HEIGHT, FOUNDATION_HALF * 2);
+        this._drawStoneFoundation();
 
         // main body
         this.wallMaterial.apply();
         this._drawBox(0, FOUNDATION_HEIGHT + BODY_H / 2, 0, BODY_W, BODY_H, BODY_D);
 
-        // big sliding door — sits just in front of the front wall to avoid z-fighting
+        // gable ends — same red planks as the body, continuous wood look up to the peak
+        this.scene.pushMatrix();
+        this.scene.translate(0, BODY_TOP, 0);
+        this.gables.display();
+        this.scene.popMatrix();
+
+        // big sliding door
         this.doorMaterial.apply();
         this.scene.pushMatrix();
         this.scene.translate(0, FOUNDATION_HEIGHT + 3, BODY_D / 2 + 0.01);
@@ -119,14 +133,14 @@ export class MyBarn extends CGFobject {
         this.quad.display();
         this.scene.popMatrix();
 
-        // hayloft door — smaller, above the main door, just below the roof
+        // hayloft door above the main door
         this.scene.pushMatrix();
         this.scene.translate(0, FOUNDATION_HEIGHT + BODY_H - 1.0, BODY_D / 2 + 0.015);
         this.scene.scale(2.4, 1.6, 1);
         this.quad.display();
         this.scene.popMatrix();
 
-        // side windows — two per side wall, glassy/dark
+        // side windows
         this.windowMaterial.apply();
         const winY = FOUNDATION_HEIGHT + 4.0;
         for (const side of [-1, 1]) {
@@ -140,14 +154,14 @@ export class MyBarn extends CGFobject {
             }
         }
 
-        // roof — gable with 1-unit overhang past the wall
+        // roof slants — single-sided; back-face culling hides the underside
         this.roofMaterial.apply();
         this.scene.pushMatrix();
         this.scene.translate(0, BODY_TOP, 0);
-        this.roofPart.display();
+        this.slants.display();
         this.scene.popMatrix();
 
-        // silos — metal cylinder + dark conical cap, sit on the ground
+        // silos
         for (const s of SILOS) {
             this.siloMaterial.apply();
             this.scene.pushMatrix();
@@ -156,18 +170,68 @@ export class MyBarn extends CGFobject {
             this.cylinder.display();
             this.scene.popMatrix();
 
+            // cone base flush with the silo top so the back-face-culled
+            // underside is never exposed
             this.capMaterial.apply();
             this.scene.pushMatrix();
             this.scene.translate(s.x, s.h, s.z);
-            // cap is a touch wider than the silo so it reads as a brim
-            this.scene.scale((s.r + 0.18) * 2, s.r * 1.0, (s.r + 0.18) * 2);
+            this.scene.scale(s.r * 2, s.r * 1.0, s.r * 2);
             this.cone.display();
             this.scene.popMatrix();
         }
+
+        this.scene.popMatrix();
     }
 
-    // Draw a 5-face box (no bottom — the foundation/ground occludes it).
-    // Each face is a unit MyBarnQuad scaled and oriented in turn.
+    // Foundation needs custom tiling per face so the stones tile at a
+    // sensible scale on the long side and on the top.
+    _drawStoneFoundation() {
+        const w = FOUNDATION_HALF * 2;
+        const d = FOUNDATION_HALF * 2;
+        const h = FOUNDATION_HEIGHT;
+        const cy = h / 2;
+        const hx = FOUNDATION_HALF;
+
+        // front
+        this.scene.pushMatrix();
+        this.scene.translate(0, cy, hx);
+        this.scene.scale(w, h, 1);
+        this.stoneSideQuad.display();
+        this.scene.popMatrix();
+
+        // back
+        this.scene.pushMatrix();
+        this.scene.translate(0, cy, -hx);
+        this.scene.rotate(Math.PI, 0, 1, 0);
+        this.scene.scale(w, h, 1);
+        this.stoneSideQuad.display();
+        this.scene.popMatrix();
+
+        // left
+        this.scene.pushMatrix();
+        this.scene.translate(-hx, cy, 0);
+        this.scene.rotate(-Math.PI / 2, 0, 1, 0);
+        this.scene.scale(d, h, 1);
+        this.stoneSideQuad.display();
+        this.scene.popMatrix();
+
+        // right
+        this.scene.pushMatrix();
+        this.scene.translate(hx, cy, 0);
+        this.scene.rotate(Math.PI / 2, 0, 1, 0);
+        this.scene.scale(d, h, 1);
+        this.stoneSideQuad.display();
+        this.scene.popMatrix();
+
+        // top (visible ring around the body)
+        this.scene.pushMatrix();
+        this.scene.translate(0, h, 0);
+        this.scene.rotate(-Math.PI / 2, 1, 0, 0);
+        this.scene.scale(w, d, 1);
+        this.stoneTopQuad.display();
+        this.scene.popMatrix();
+    }
+
     _drawBox(cx, cy, cz, w, h, d) {
         const hx = w / 2, hy = h / 2, hz = d / 2;
         const faces = [
@@ -204,9 +268,32 @@ class MyBarnQuad extends CGFobject {
     }
 }
 
-// Gable roof: two slanted rectangles meeting at a ridge plus two triangular gables.
-// All faces are double-sided so the underside of the overhang is filled in.
-class MyBarnRoof extends CGFobject {
+// Same shape as MyBarnQuad but with configurable UV repeat counts so a single
+// quad can show many tiles of its texture (needs REPEAT wrap on the material).
+class MyTexQuad extends CGFobject {
+    constructor(scene, uRepeat = 1, vRepeat = 1) {
+        super(scene);
+        this.uRepeat = uRepeat;
+        this.vRepeat = vRepeat;
+        this.initBuffers();
+    }
+    initBuffers() {
+        this.vertices = [-0.5, -0.5, 0, 0.5, -0.5, 0, -0.5, 0.5, 0, 0.5, 0.5, 0];
+        this.indices = [
+            0, 1, 3, 0, 3, 2,
+            3, 1, 0, 2, 3, 0
+        ];
+        this.normals = [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1];
+        const u = this.uRepeat, v = this.vRepeat;
+        this.texCoords = [0, v, u, v, 0, 0, u, 0];
+        this.primitiveType = this.scene.gl.TRIANGLES;
+        this.initGLBuffers();
+    }
+}
+
+// Two slanted rectangles meeting at the ridge. CCW from outside (above), so
+// back-face culling hides the underside.
+class MyBarnSlants extends CGFobject {
     constructor(scene, halfW, peakH, halfD) {
         super(scene);
         this.halfW = halfW;
@@ -217,30 +304,22 @@ class MyBarnRoof extends CGFobject {
     initBuffers() {
         const w = this.halfW, rh = this.peakH, d = this.halfD;
         this.vertices = [
-            // left slant
+            // left slant: bottom-front, top-front, bottom-back, top-back
             -w, 0, d,  0, rh, d,  -w, 0, -d, 0, rh, -d,
             // right slant
-            0, rh, d, w, 0, d,   0, rh, -d, w, 0, -d,
-            // front gable
-            -w, 0, d,  w, 0, d,   0, rh, d,
-            // back gable
-            -w, 0, -d, w, 0, -d,  0, rh, -d
+            0, rh, d, w, 0, d,   0, rh, -d, w, 0, -d
         ];
 
         this.indices = [
             0, 1, 3, 0, 3, 2,
-            4, 5, 7, 4, 7, 6,
-            8, 9, 10,
-            13, 12, 11,
-            // double-sided
-            3, 1, 0, 2, 3, 0, 7, 5, 4, 6, 7, 4, 10, 9, 8, 11, 12, 13
+            4, 5, 7, 4, 7, 6
         ];
 
+        // tile the shingle texture along the slant length so each shingle
+        // reads at a sensible scale
         this.texCoords = [
             0, 2,  1, 2,  0, 0,  1, 0,
-            1, 2,  0, 2,  1, 0,  0, 0,
-            0, 1,  1, 1,  0.5, 0,
-            0, 1,  1, 1,  0.5, 0
+            1, 2,  0, 2,  1, 0,  0, 0
         ];
 
         const len = Math.sqrt(rh * rh + w * w);
@@ -249,7 +328,46 @@ class MyBarnRoof extends CGFobject {
 
         this.normals = [
             ...nl, ...nl, ...nl, ...nl,
-            ...nr, ...nr, ...nr, ...nr,
+            ...nr, ...nr, ...nr, ...nr
+        ];
+
+        this.primitiveType = this.scene.gl.TRIANGLES;
+        this.initGLBuffers();
+    }
+}
+
+// Front and back triangular gables — drawn separately from the slants so the
+// barn can apply the wall (planks) material to them while the slants keep the
+// shingle material.
+class MyBarnGables extends CGFobject {
+    constructor(scene, halfW, peakH, halfD) {
+        super(scene);
+        this.halfW = halfW;
+        this.peakH = peakH;
+        this.halfD = halfD;
+        this.initBuffers();
+    }
+    initBuffers() {
+        const w = this.halfW, rh = this.peakH, d = this.halfD;
+        this.vertices = [
+            // front gable
+            -w, 0, d,  w, 0, d,  0, rh, d,
+            // back gable
+            -w, 0, -d, w, 0, -d, 0, rh, -d
+        ];
+
+        // Front: CCW from +z. Back: reverse winding so normal points -z.
+        this.indices = [
+            0, 1, 2,
+            5, 4, 3
+        ];
+
+        this.texCoords = [
+            0, 1, 1, 1, 0.5, 0,
+            0, 1, 1, 1, 0.5, 0
+        ];
+
+        this.normals = [
             0, 0, 1,  0, 0, 1,  0, 0, 1,
             0, 0, -1, 0, 0, -1, 0, 0, -1
         ];
@@ -260,7 +378,9 @@ class MyBarnRoof extends CGFobject {
 }
 
 // Unit cylinder: radius 0.5 around the Y axis, height from y=0 to y=1.
-// Open top/bottom — the cone cap covers the top, the ground hides the bottom.
+// UV is rotated 90° so the corrugated_iron texture's horizontal bands run
+// vertically up the silo (matching real corrugated-metal panels), and tiled
+// 3× around so each panel is a sensible width.
 class MyBarnCylinder extends CGFobject {
     constructor(scene, sides = 24) {
         super(scene);
@@ -273,23 +393,21 @@ class MyBarnCylinder extends CGFobject {
         this.texCoords = [];
         this.indices = [];
 
-        // map V from 0 to 0.5 so we only sample the upper half of the source
-        // texture — the corrugated_iron.png has a visible horizontal panel
-        // seam at its vertical midpoint that read as a dark band on the silo.
         const N = this.sides;
+        const vTilesAround = 3;
         for (let i = 0; i <= N; i++) {
             const t = i / N;
             const angle = t * 2 * Math.PI;
             const cx = Math.cos(angle);
             const cz = Math.sin(angle);
-            // bottom vertex
+            // bottom vertex — U=1 maps to one edge of the texture
             this.vertices.push(cx * 0.5, 0, cz * 0.5);
             this.normals.push(cx, 0, cz);
-            this.texCoords.push(t, 0.5);
-            // top vertex
+            this.texCoords.push(1, t * vTilesAround);
+            // top vertex — U=0 maps to the opposite edge
             this.vertices.push(cx * 0.5, 1, cz * 0.5);
             this.normals.push(cx, 0, cz);
-            this.texCoords.push(t, 0);
+            this.texCoords.push(0, t * vTilesAround);
         }
 
         for (let i = 0; i < N; i++) {
@@ -297,7 +415,6 @@ class MyBarnCylinder extends CGFobject {
             const t0 = i * 2 + 1;
             const b1 = (i + 1) * 2;
             const t1 = (i + 1) * 2 + 1;
-            // CCW from outside the cylinder so back-face culling hides the inside
             this.indices.push(b0, t1, b1, b0, t0, t1);
         }
 
@@ -306,8 +423,6 @@ class MyBarnCylinder extends CGFobject {
     }
 }
 
-// Cone: base radius 0.5 at y=0, apex at y=1. Per-slice triangles so each face
-// gets a flat normal — picks up shaded planes nicely under the directional sun.
 class MyBarnCone extends CGFobject {
     constructor(scene, sides = 24) {
         super(scene);
@@ -321,7 +436,6 @@ class MyBarnCone extends CGFobject {
         this.indices = [];
 
         const N = this.sides;
-        // slope normal: outward from axis. base radius 0.5, height 1.
         const slopeH = 0.5;
         const slopeV = 1.0;
         const slopeLen = Math.sqrt(slopeH * slopeH + slopeV * slopeV);
@@ -347,7 +461,6 @@ class MyBarnCone extends CGFobject {
             this.normals.push(nx, nyAxial, nz,  nx, nyAxial, nz,  nx, nyAxial, nz);
             this.texCoords.push(t0, 1, t1, 1, (t0 + t1) / 2, 0);
 
-            // CCW from outside — apex first when viewed from outside
             this.indices.push(idx, idx + 2, idx + 1);
         }
 
