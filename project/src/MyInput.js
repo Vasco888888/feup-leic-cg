@@ -1,9 +1,8 @@
-import { CGFinterface } from "../../lib/CGF.js";
+import { CGFinterface, dat } from "../../lib/CGF.js";
 
-// Input plumbing only — the CGF harness requires app.setInterface() to receive
-// a CGFinterface, and the wagon + gameplay read keys via scene.input.
-// No dat.GUI panel: tuning was done during development and the values are now
-// baked into the scene/lighting/wagon constructors.
+// Keyboard/mouse plumbing and the dat.GUI panel. The numeric bars (HP,
+// instantaneous damage, instantaneous health restored, bales delivered, score)
+// read live from MyGameplay via .listen().
 export class MyInput extends CGFinterface {
     constructor() {
         super();
@@ -12,13 +11,47 @@ export class MyInput extends CGFinterface {
     init(application) {
         super.init(application);
 
-        // scene reads input via scene.input.isKeyPressed(...)
         this.scene.input = this;
         // suppress CGFinterface's built-in WASD camera handling so the wagon owns those keys
         this.processKeyboard = function () {};
         this.activeKeys = {};
 
+        // CGFinterface.init() does NOT auto-call initInterface(), so invoke it here
+        this.initInterface();
+
         return true;
+    }
+
+    initInterface() {
+        // setInterface runs AFTER setScene, so scene.gameplay is already wired up
+        // and its properties can be bound straight into dat.GUI bars.
+        this.gui = new dat.GUI();
+        // hidden while the menu is up; MyGameplay toggles visibility on Play
+        // and on game-over so the title screen stays clean
+        this.setGuiVisible(false);
+
+        const gameplay = this.scene && this.scene.gameplay;
+        if (gameplay) {
+            const f = this.gui.addFolder('Gameplay');
+            const controllers = [
+                f.add(gameplay, 'wagonHP', 0, gameplay.maxHP).name('HP').listen(),
+                f.add(gameplay, 'lastDamage', 0, 15).name('Instant damage').listen(),
+                f.add(gameplay, 'lastHealing', 0, gameplay.maxHP).name('Instant heal').listen(),
+                f.add(gameplay, 'balesDelivered', 0, 50).name('Bales delivered').listen(),
+                f.add(gameplay, 'score', 0, 9999).name('Score (s)').listen()
+            ];
+            // disable pointer events so the player can't drag the sliders
+            for (const c of controllers) {
+                c.domElement.style.pointerEvents = 'none';
+            }
+            f.open();
+        }
+    }
+
+    setGuiVisible(visible) {
+        if (this.gui && this.gui.domElement) {
+            this.gui.domElement.style.display = visible ? '' : 'none';
+        }
     }
 
     processKeyDown(event) {

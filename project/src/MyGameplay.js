@@ -26,6 +26,14 @@ export class MyGameplay {
         this.wagonInDeliveryZone = false;
         this.balesDelivered = 0;
 
+        // Instantaneous-event readouts on the HUD: spike on each
+        // collision/delivery and fade back to 0 over ~2.5s.
+        this.lastDamage = 0;
+        this.lastHealing = 0;
+        this._damagePeak = 0;
+        this._healingPeak = 0;
+        this._eventFade = 2.5;
+
         // hay bales scattered around the field; populated in init() once barn is placed
         this.bales = [];
         // reach point sits ahead of the wagon centre (near the horse), with a
@@ -52,6 +60,14 @@ export class MyGameplay {
     // per-frame HP/score tick — sub-second dt accumulates so the readouts step
     // exactly once per real-time second regardless of frame rate
     tick(dt) {
+        // fade the instantaneous-event readouts back to 0 across _eventFade seconds
+        if (this.lastDamage > 0 && this._damagePeak > 0) {
+            this.lastDamage = Math.max(0, this.lastDamage - this._damagePeak * dt / this._eventFade);
+        }
+        if (this.lastHealing > 0 && this._healingPeak > 0) {
+            this.lastHealing = Math.max(0, this.lastHealing - this._healingPeak * dt / this._eventFade);
+        }
+
         this._tickAccum += dt;
         while (this._tickAccum >= 1) {
             this._tickAccum -= 1;
@@ -65,6 +81,10 @@ export class MyGameplay {
     showMenu() {
         this.gameState = 'menu';
         if (this._menuEl) this._menuEl.classList.remove("hidden");
+        // hide the dat.GUI panel behind the title screen
+        if (this.scene.input && this.scene.input.setGuiVisible) {
+            this.scene.input.setGuiVisible(false);
+        }
     }
 
     startGame() {
@@ -78,6 +98,10 @@ export class MyGameplay {
         this.wagonInDeliveryZone = false;
         this.prevPickupKey = false;
         this.prevDropKey = false;
+        this.lastDamage = 0;
+        this.lastHealing = 0;
+        this._damagePeak = 0;
+        this._healingPeak = 0;
 
         this.bales = this._generateBales(22, 2024);
 
@@ -100,6 +124,11 @@ export class MyGameplay {
         if (scene.chaseCamera) {
             const spawnY = scene.terrain ? scene.terrain.getTerrainHeight(0, 0) : 0;
             scene.chaseCamera.snapBehind(spawnY);
+        }
+
+        // reveal the dat.GUI now that the playthrough is starting
+        if (scene.input && scene.input.setGuiVisible) {
+            scene.input.setGuiVisible(true);
         }
 
         if (this._menuEl) this._menuEl.classList.add("hidden");
@@ -126,10 +155,15 @@ export class MyGameplay {
         // wagon's edge-detection guarantees a single hit per contact event
         const hits = this.scene.wagon.newCollisionIds;
         if (!hits || hits.length === 0) return;
+        let totalDamage = 0;
         for (let i = 0; i < hits.length; i++) {
             const damage = 5 + Math.floor(Math.random() * 11);
             this.wagonHP = Math.max(0, this.wagonHP - damage);
+            totalDamage += damage;
         }
+        // surface the bite on the instantaneous-damage bar
+        this.lastDamage = totalDamage;
+        this._damagePeak = Math.max(this._damagePeak, totalDamage);
     }
 
     applyDelivery() {
@@ -146,6 +180,9 @@ export class MyGameplay {
                 const deliveredSet = new Set(carried);
                 this.bales = this.bales.filter(b => !deliveredSet.has(b));
                 scene.wagon.carriedBales = [];
+                // surface the heal on the instantaneous-heal bar
+                this.lastHealing = restored;
+                this._healingPeak = Math.max(this._healingPeak, restored);
             }
         }
         this.wagonInDeliveryZone = inside;
