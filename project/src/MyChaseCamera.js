@@ -1,13 +1,13 @@
 import { CGFcamera } from "../../lib/CGF.js";
 
 // Third-person chase camera: smoothly trails the wagon's position and heading,
-// with mouse-driven pitch + side swing. Owns the dat.GUI-tweakable offsets and
-// the underlying CGFcamera (exposed as scene.camera so the CGF harness sees it).
+// with mouse-driven pitch and side swing. Owns the wagon-local offsets and the
+// underlying CGFcamera, which is exposed as scene.camera for the CGF harness.
 export class MyChaseCamera {
     constructor(scene) {
         this.scene = scene;
 
-        // dat.GUI toggle: off lets the user use the default CGF camera controls instead
+        // when off, the default CGF camera controls take over
         this.follow = true;
 
         // wagon-local offsets: X is rightward, Y is up, Z is backward
@@ -77,19 +77,61 @@ export class MyChaseCamera {
         cam.target[2] += (desiredTgtZ - cam.target[2]) * k;
     }
 
-    // snap the chase camera straight behind the wagon at the given spawn height,
-    // used by MyGameplay.startGame so the camera doesn't fly back from the death spot
-    snapBehind(spawnY) {
-        this.heading = 0;
+    // 3/4 cinematic pose for the title screen: above and to the wagon's
+    // front-right, looking past the wagon toward the barn behind it. Fixed
+    // framing — does not chase.
+    frameTitleShot() {
+        const w = this.scene.wagon;
+        const cam = this.scene.camera;
+        if (!w || !cam) return;
+
+        this.heading = w.heading;
         this.pitchOffset = 0;
         this.sideOffset = 0;
+
+        const cosH = Math.cos(w.heading);
+        const sinH = Math.sin(w.heading);
+
+        // wagon-local offsets: +forward is in front of the wagon, +right is to
+        // its right (which maps to world via the standard heading rotation)
+        const eyeForward = 14;
+        const eyeRight = 8;
+        const eyeUp = 7;
+        const tgtBehind = 10; // target sits 10u behind the wagon, drawing the eye toward the barn
+        const tgtUp = 2;
+
+        cam.position[0] = w.position[0] + eyeForward * cosH + eyeRight * sinH;
+        cam.position[1] = w.position[1] + eyeUp;
+        cam.position[2] = w.position[2] - eyeForward * sinH + eyeRight * cosH;
+
+        cam.target[0] = w.position[0] - tgtBehind * cosH;
+        cam.target[1] = w.position[1] + tgtUp;
+        cam.target[2] = w.position[2] + tgtBehind * sinH;
+    }
+
+    // snap the chase camera behind the wagon's current pose. Called when the
+    // wagon is repositioned (init / startGame / respawn) so update() doesn't
+    // lerp in from the previous spot.
+    snapBehind() {
+        const w = this.scene.wagon;
         const cam = this.scene.camera;
-        if (!cam) return;
-        cam.position[0] = -this.offsetZ;
-        cam.position[1] = spawnY + this.offsetY;
-        cam.position[2] = 0;
-        cam.target[0] = 0;
-        cam.target[1] = spawnY + this.targetUp;
-        cam.target[2] = 0;
+        if (!w || !cam) return;
+
+        // sync the smoothed heading immediately so update() doesn't slew toward
+        // the old heading on the first frame
+        this.heading = w.heading;
+        this.pitchOffset = 0;
+        this.sideOffset = 0;
+
+        const cosH = Math.cos(this.heading);
+        const sinH = Math.sin(this.heading);
+
+        cam.position[0] = w.position[0] - this.offsetZ * cosH;
+        cam.position[1] = w.position[1] + this.offsetY;
+        cam.position[2] = w.position[2] + this.offsetZ * sinH;
+
+        cam.target[0] = w.position[0];
+        cam.target[1] = w.position[1] + this.targetUp;
+        cam.target[2] = w.position[2];
     }
 }

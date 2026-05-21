@@ -49,6 +49,15 @@ export class MyGameplay {
     init() {
         this.bales = this._generateBales(22, 2024);
 
+        // park the wagon next to the barn so the title screen frames the wagon
+        // with the barn behind it
+        this.spawnWagonAtBarn();
+        // cinematic 3/4 view for the menu — the chase pose would sit inside the
+        // barn since the wagon faces away from it
+        if (this.scene.chaseCamera) {
+            this.scene.chaseCamera.frameTitleShot();
+        }
+
         this._menuEl = document.getElementById("menu");
         const playBtn = document.getElementById("menu-play");
         if (playBtn) playBtn.addEventListener("click", () => this.startGame());
@@ -89,7 +98,7 @@ export class MyGameplay {
     startGame() {
         const scene = this.scene;
 
-        // wipe the previous run's state so a Play after game-over starts clean
+        // reset run state so a fresh playthrough starts clean
         this.wagonHP = this.maxHP;
         this.score = 0;
         this.balesDelivered = 0;
@@ -104,25 +113,13 @@ export class MyGameplay {
 
         this.bales = this._generateBales(22, 2024);
 
-        if (scene.wagon) {
-            scene.wagon.position[0] = 0;
-            scene.wagon.position[1] = scene.terrain ? scene.terrain.getTerrainHeight(0, 0) : 0;
-            scene.wagon.position[2] = 0;
-            scene.wagon.heading = 0;
-            scene.wagon.speed = 0;
-            scene.wagon.pitch = 0;
-            scene.wagon.roll = 0;
-            scene.wagon.frontSpin = 0;
-            scene.wagon.rearSpin = 0;
-            scene.wagon.carriedBales = [];
-            scene.wagon.activeCollisionIds = new Set();
-            scene.wagon.newCollisionIds = [];
-        }
+        // spawn in front of the barn facing the delivery zone — matches the
+        // title-screen framing so Play continues directly from the menu pose
+        this.spawnWagonAtBarn();
 
-        // snap the chase camera straight behind the wagon so it doesn't fly back from the death spot
-        if (scene.chaseCamera) {
-            const spawnY = scene.terrain ? scene.terrain.getTerrainHeight(0, 0) : 0;
-            scene.chaseCamera.snapBehind(spawnY);
+        // snap the chase camera straight behind the wagon so it doesn't fly in from elsewhere
+        if (scene.chaseCamera && scene.wagon) {
+            scene.chaseCamera.snapBehind();
         }
 
         // reveal the dat.GUI now that the playthrough is starting
@@ -132,6 +129,37 @@ export class MyGameplay {
 
         if (this._menuEl) this._menuEl.classList.add("hidden");
         this.gameState = 'playing';
+    }
+
+    // Place the wagon at the barn's start mark: in front of the delivery zone,
+    // facing away from the barn. Called from MyScene.init for the menu backdrop
+    // and from startGame to reset between runs.
+    spawnWagonAtBarn() {
+        const scene = this.scene;
+        if (!scene.wagon || !scene.barnPos) return;
+
+        // 25 units in front of the barn centre — far enough that the chase
+        // camera (positioned 18u behind the wagon) doesn't land inside the
+        // barn's footprint on Play
+        const spawnX = scene.barnPos.x;
+        const spawnZ = scene.barnPos.z + 25;
+        const spawnY = scene.terrain ? scene.terrain.getTerrainHeight(spawnX, spawnZ) : 0;
+
+        scene.wagon.position[0] = spawnX;
+        scene.wagon.position[1] = spawnY;
+        scene.wagon.position[2] = spawnZ;
+        // heading = -π/2 → forward = +Z, so the wagon points AWAY from the barn
+        // (barn sits behind the wagon — the chase camera frames the barn over
+        // the wagon's roof from the title screen)
+        scene.wagon.heading = -Math.PI / 2;
+        scene.wagon.speed = 0;
+        scene.wagon.pitch = 0;
+        scene.wagon.roll = 0;
+        scene.wagon.frontSpin = 0;
+        scene.wagon.rearSpin = 0;
+        scene.wagon.carriedBales = [];
+        scene.wagon.activeCollisionIds = new Set();
+        scene.wagon.newCollisionIds = [];
     }
 
     applyImpactDamage() {
