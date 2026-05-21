@@ -14,8 +14,10 @@ const BODY_D = 10;
 const BODY_H = 8;
 const BODY_TOP = FOUNDATION_HEIGHT + BODY_H;     // y = 9.5
 const ROOF_PEAK_H = 4;
-const ROOF_HALF_W = 6;                            // 12 wide (1 unit overhang per side)
-const ROOF_HALF_D = 6;
+// roof base flush with the walls — overhangs exposed the slant underside,
+// which read as "you can see inside the roof" from low viewing angles
+const ROOF_HALF_W = 5;
+const ROOF_HALF_D = 5;
 
 const SILOS = [
     { x: -7.2, z:  2.0, r: 2.0, h: 12.5 },
@@ -271,6 +273,9 @@ class MyBarnCylinder extends CGFobject {
         this.texCoords = [];
         this.indices = [];
 
+        // map V from 0 to 0.5 so we only sample the upper half of the source
+        // texture — the corrugated_iron.png has a visible horizontal panel
+        // seam at its vertical midpoint that read as a dark band on the silo.
         const N = this.sides;
         for (let i = 0; i <= N; i++) {
             const t = i / N;
@@ -280,7 +285,7 @@ class MyBarnCylinder extends CGFobject {
             // bottom vertex
             this.vertices.push(cx * 0.5, 0, cz * 0.5);
             this.normals.push(cx, 0, cz);
-            this.texCoords.push(t, 1);
+            this.texCoords.push(t, 0.5);
             // top vertex
             this.vertices.push(cx * 0.5, 1, cz * 0.5);
             this.normals.push(cx, 0, cz);

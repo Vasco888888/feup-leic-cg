@@ -8,8 +8,8 @@ export class MyLighting {
 
         this.sunDirection = vec3.fromValues(-0.35, 0.72, 0.60);
         this.moonDirection = vec3.fromValues(0.35, -0.72, -0.60);
-        // one full sun-arc per real-time minute
-        this.dayCycleSpeed = (2 * Math.PI) / 60;
+        // one full sun-arc per 2 min 30 s of real time
+        this.dayCycleSpeed = (2 * Math.PI) / 150;
         // start a bit past noon so the first frame of Play looks like daylight
         this.dayTime = Math.PI / 2.5;
 
