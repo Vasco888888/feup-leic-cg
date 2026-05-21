@@ -256,6 +256,17 @@ export class MyScene extends CGFscene {
         // barn footprint: 10x10 square, treated as a tight circle
         colliders.push({ x: this.barnPos.x, z: this.barnPos.z, radius: 6.5 });
 
+        // silos and other barn-side props expose their own local footprints
+        if (this.barn && this.barn.getColliders) {
+            for (const c of this.barn.getColliders()) {
+                colliders.push({
+                    x: this.barnPos.x + c.localX,
+                    z: this.barnPos.z + c.localZ,
+                    radius: c.radius
+                });
+            }
+        }
+
         // every grounded hay bale is a soft collider so the horse can muzzle
         // up to it, but the wagon bed still bumps into it
         for (const bale of this.gameplay.bales) {
