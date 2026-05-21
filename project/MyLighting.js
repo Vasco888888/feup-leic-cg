@@ -6,14 +6,11 @@ export class MyLighting {
     constructor(scene) {
         this.scene = scene;
 
-        // dat.GUI toggles
-        this.sunLightEnabled = true;
-        this.spotLightEnabled = false; // off by default so the sun controls the lighting
-        this.pauseDayCycle = true;
-
         this.sunDirection = vec3.fromValues(-0.35, 0.72, 0.60);
         this.moonDirection = vec3.fromValues(0.35, -0.72, -0.60);
-        this.dayCycleSpeed = 0.2;
+        // one full sun-arc per real-time minute
+        this.dayCycleSpeed = (2 * Math.PI) / 60;
+        // start a bit past noon so the first frame of Play looks like daylight
         this.dayTime = Math.PI / 2.5;
 
         // blend factors derived from sun elevation; read by grass, mountain, sky shaders
@@ -76,9 +73,10 @@ export class MyLighting {
         this._applyDynamicLighting();
     }
 
-    update(t, playing) {
-        if (!this.pauseDayCycle && playing) {
-            this.dayTime = (t / 1000.0) * this.dayCycleSpeed;
+    update(t, dt, playing) {
+        // dt-accumulated so the cycle freezes cleanly while the menu is up
+        if (playing && dt > 0) {
+            this.dayTime += dt * this.dayCycleSpeed;
         }
         this.sunDirection = vec3.fromValues(
             Math.cos(this.dayTime),
@@ -101,28 +99,14 @@ export class MyLighting {
         this._applyDynamicLighting();
     }
 
-    // per-frame UI-toggle gate — display() calls this so a flipped checkbox
-    // takes effect within a render, even between update ticks
+    // re-issue light.update() each render so any state changes from
+    // _applyDynamicLighting take effect; the spotlight stays disabled.
     updateLightStates() {
         const scene = this.scene;
-        if (scene.lights.length > 0) {
-            if (this.sunLightEnabled) scene.lights[0].enable();
-            else scene.lights[0].disable();
-            scene.lights[0].update();
-        }
-
-        if (scene.lights.length > 1) {
-            if (this.spotLightEnabled) scene.lights[1].enable();
-            else scene.lights[1].disable();
-            scene.lights[1].update();
-        }
-
-        if (scene.lights.length > 2) {
-            scene.lights[2].update();
-        }
-        if (scene.lights.length > 3) {
-            scene.lights[3].update();
-        }
+        if (scene.lights.length > 0) scene.lights[0].update();
+        if (scene.lights.length > 1) scene.lights[1].update();
+        if (scene.lights.length > 2) scene.lights[2].update();
+        if (scene.lights.length > 3) scene.lights[3].update();
     }
 
     _applyDynamicLighting() {

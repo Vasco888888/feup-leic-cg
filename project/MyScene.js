@@ -189,7 +189,7 @@ export class MyScene extends CGFscene {
             this.gameplay.tick(dt);
         }
 
-        this.lighting.update(t, playing);
+        this.lighting.update(t, dt, playing);
 
         // clouds and grass are time-driven — freeze them with the rest of the world while menu is up
         if (playing) {

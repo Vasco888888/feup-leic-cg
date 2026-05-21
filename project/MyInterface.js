@@ -1,5 +1,9 @@
-import { CGFinterface, dat } from "../lib/CGF.js";
+import { CGFinterface } from "../lib/CGF.js";
 
+// Input plumbing only — the CGF harness requires app.setInterface() to receive
+// a CGFinterface, and the wagon + gameplay read keys via scene.gui.
+// No dat.GUI panel: tuning was done during development and the values are now
+// baked into the scene/lighting/wagon constructors.
 export class MyInterface extends CGFinterface {
     constructor() {
         super();
@@ -8,49 +12,13 @@ export class MyInterface extends CGFinterface {
     init(application) {
         super.init(application);
 
-        this.gui = new dat.GUI();
-
-        const skyFolder = this.gui.addFolder("Sky");
-        skyFolder.add(this.scene, "showSky").name("Show Sky");
-        skyFolder.add(this.scene, "showClouds").name("Show Clouds");
-        skyFolder.add(this.scene, "skyRadius", 120, 600).name("Sky Radius");
-        skyFolder.add(this.scene, "cloudSpeed", 0.0, 0.08).name("Cloud Speed");
-
-        const terrainFolder = this.gui.addFolder("Terrain");
-        terrainFolder.add(this.scene, "showTerrain").name("Show Terrain");
-        terrainFolder.add(this.scene, "terrainWireframe").name("Wireframe");
-        terrainFolder.add(this.scene, "showRocks").name("Show Rocks");
-        terrainFolder.add(this.scene, "showFlowers").name("Show Flowers");
-        terrainFolder.add(this.scene, "showGrass").name("Show Grass");
-
-        const lightFolder = this.gui.addFolder("Sun Lighting");
-        lightFolder.add(this.scene.lighting, "sunLightEnabled").name("Directional Sun");
-        lightFolder.add(this.scene.lighting, "spotLightEnabled").name("Spotlight");
-        lightFolder.add(this.scene.lighting, "pauseDayCycle").name("Pause Cycle");
-
-        const wagonFolder = this.gui.addFolder("Wagon");
-        if (this.scene.wagon) {
-            wagonFolder.add(this.scene.wagon, "maxSpeed", 1, 30).name("Max Speed");
-        }
-
-        const cameraFolder = this.gui.addFolder("Camera");
-        cameraFolder.add(this.scene.chaseCamera, "follow").name("Follow Wagon");
-        cameraFolder.add(this.scene.chaseCamera, "offsetX", -60, 60).name("Offset X");
-        cameraFolder.add(this.scene.chaseCamera, "offsetY", 4, 40).name("Height");
-        cameraFolder.add(this.scene.chaseCamera, "offsetZ", -60, 60).name("Offset Z");
-        cameraFolder.add(this.scene.chaseCamera, "smoothTau", 0.05, 1.5).name("Smoothing");
-
-        this.initKeys();
-
-        return true;
-    }
-
-    initKeys() {
         // scene reads input via scene.gui.isKeyPressed(...)
         this.scene.gui = this;
-        // suppress CGFinterface's built-in WASD camera handling
+        // suppress CGFinterface's built-in WASD camera handling so the wagon owns those keys
         this.processKeyboard = function () {};
         this.activeKeys = {};
+
+        return true;
     }
 
     processKeyDown(event) {
@@ -75,12 +43,12 @@ export class MyInterface extends CGFinterface {
         // normalised cursor position, -1 at top/left, +1 at bottom/right
         const nx = (relX / rect.width) * 2.0 - 1.0;
         const ny = (relY / rect.height) * 2.0 - 1.0;
-        // upper half lifts the target (look up to sky), lower half drops it (look down)
+        // upper half lifts the target (look up to sky), lower half drops it
         this.scene.chaseCamera.pitchOffset = -ny * 80;
-        // swing the camera around to the wagon's right shoulder (left edge of screen)
-        // or left shoulder (right edge) so the wagon is always framed
+        // swing the camera around to the wagon's right/left shoulder so the wagon stays framed
         this.scene.chaseCamera.sideOffset = -nx * 16;
     }
+
     processMouseDown(event) {}
     processMouseUp(event) {}
     processClick(event) {}
