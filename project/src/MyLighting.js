@@ -32,6 +32,9 @@ export class MyLighting {
         }
 
         if (scene.lights.length > 1) {
+            // legacy debug spotlight — kept configured but disabled. Previously the
+            // dat.GUI panel toggled it; without that UI it was leaking on at all hours
+            // and washing out flowers/rocks once the sun went down.
             scene.lights[1].setPosition(45, 85, -30, 1);
             scene.lights[1].setAmbient(0.05, 0.05, 0.05, 1.0);
             scene.lights[1].setDiffuse(1.00, 0.90, 0.70, 1.0);
@@ -39,7 +42,7 @@ export class MyLighting {
             scene.lights[1].setSpotDirection(-45, -85, 30);
             scene.lights[1].setSpotExponent(8);
             scene.lights[1].setSpotCutOff(55);
-            scene.lights[1].enable();
+            scene.lights[1].disable();
             scene.lights[1].update();
         }
 
