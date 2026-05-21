@@ -48,14 +48,14 @@ export class MyWagon extends CGFobject {
         this.seat = new MySeat(scene);
         this.lamp = new MyLamp(scene);
 
-        this.horse = new CGFobjModel(scene, "models/external/horse.obj");
+        this.horse = new CGFobjModel(scene, "models/external/horse/horse.obj");
         this.horseMaterial = new CGFappearance(scene);
         this.horseMaterial.setAmbient(0.588, 0.588, 0.588, 1.0);
         this.horseMaterial.setDiffuse(0.588, 0.588, 0.588, 1.0);
         this.horseMaterial.setSpecular(0.0, 0.0, 0.0, 1.0);
         this.horseMaterial.setShininess(10.0);
 
-        this.horseTexture = new CGFtexture(scene, "textures/props/wagon/horse/horse.jpg");
+        this.horseTexture = new CGFtexture(scene, "models/external/horse/horse.jpg");
         this.horseMaterial.setTexture(this.horseTexture);
 
         // world-space state
