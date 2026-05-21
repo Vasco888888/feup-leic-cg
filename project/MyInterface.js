@@ -24,9 +24,9 @@ export class MyInterface extends CGFinterface {
         terrainFolder.add(this.scene, "showGrass").name("Show Grass");
 
         const lightFolder = this.gui.addFolder("Sun Lighting");
-        lightFolder.add(this.scene, "sunLightEnabled").name("Directional Sun");
-        lightFolder.add(this.scene, "spotLightEnabled").name("Spotlight");
-        lightFolder.add(this.scene, "pauseDayCycle").name("Pause Cycle");
+        lightFolder.add(this.scene.lighting, "sunLightEnabled").name("Directional Sun");
+        lightFolder.add(this.scene.lighting, "spotLightEnabled").name("Spotlight");
+        lightFolder.add(this.scene.lighting, "pauseDayCycle").name("Pause Cycle");
 
         const wagonFolder = this.gui.addFolder("Wagon");
         if (this.scene.wagon) {
@@ -34,11 +34,11 @@ export class MyInterface extends CGFinterface {
         }
 
         const cameraFolder = this.gui.addFolder("Camera");
-        cameraFolder.add(this.scene, "cameraFollow").name("Follow Wagon");
-        cameraFolder.add(this.scene, "cameraOffsetX", -60, 60).name("Offset X");
-        cameraFolder.add(this.scene, "cameraOffsetY", 4, 40).name("Height");
-        cameraFolder.add(this.scene, "cameraOffsetZ", -60, 60).name("Offset Z");
-        cameraFolder.add(this.scene, "cameraSmoothTau", 0.05, 1.5).name("Smoothing");
+        cameraFolder.add(this.scene.chaseCamera, "follow").name("Follow Wagon");
+        cameraFolder.add(this.scene.chaseCamera, "offsetX", -60, 60).name("Offset X");
+        cameraFolder.add(this.scene.chaseCamera, "offsetY", 4, 40).name("Height");
+        cameraFolder.add(this.scene.chaseCamera, "offsetZ", -60, 60).name("Offset Z");
+        cameraFolder.add(this.scene.chaseCamera, "smoothTau", 0.05, 1.5).name("Smoothing");
 
         this.initKeys();
 
@@ -76,10 +76,10 @@ export class MyInterface extends CGFinterface {
         const nx = (relX / rect.width) * 2.0 - 1.0;
         const ny = (relY / rect.height) * 2.0 - 1.0;
         // upper half lifts the target (look up to sky), lower half drops it (look down)
-        this.scene.cameraPitchOffset = -ny * 80;
+        this.scene.chaseCamera.pitchOffset = -ny * 80;
         // swing the camera around to the wagon's right shoulder (left edge of screen)
         // or left shoulder (right edge) so the wagon is always framed
-        this.scene.cameraSideOffset = -nx * 16;
+        this.scene.chaseCamera.sideOffset = -nx * 16;
     }
     processMouseDown(event) {}
     processMouseUp(event) {}

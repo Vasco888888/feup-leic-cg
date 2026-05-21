@@ -1,4 +1,4 @@
-import { CGFscene, CGFcamera, CGFaxis, CGFappearance, CGFshader, CGFtexture } from "../lib/CGF.js";
+import { CGFscene, CGFappearance, CGFshader, CGFtexture } from "../lib/CGF.js";
 import { MySkyDome } from "./models/environment/MySkyDome.js";
 import { MyPlane } from "./models/primitives/MyPlane.js";
 import { MyWagon } from "./models/props/wagon/MyWagon.js";
@@ -11,6 +11,9 @@ import { MyRockSet } from "./models/environment/MyRockSet.js";
 import { MyFlowerSet } from "./models/environment/MyFlowerSet.js";
 import { MyGrassSet } from "./models/environment/MyGrassSet.js";
 import { MyMountainPanorama } from "./models/environment/MyMountainPanorama.js";
+import { MyGameplay } from "./MyGameplay.js";
+import { MyLighting } from "./MyLighting.js";
+import { MyChaseCamera } from "./MyChaseCamera.js";
 
 export class MyScene extends CGFscene {
     constructor() {
@@ -24,77 +27,26 @@ export class MyScene extends CGFscene {
         this.showFlowers = true;
         this.showGrass = true;
 
-        this.sunLightEnabled = true;
-        this.spotLightEnabled = false; // off by default so the sun controls the lighting
-
         this.cloudSpeed = 0.01;
         this.cloudOffset = 0.0;
         this.skyRadius = 760.0;
         this.terrainYOffset = 0.0;
 
-        this.sunDirection = vec3.fromValues(-0.35, 0.72, 0.60);
-        this.moonDirection = vec3.fromValues(0.35, -0.72, -0.60);
-        this.dayCycleSpeed = 0.2;
-        this.dayTime = Math.PI / 2.5;
-        this.sunInfluence = 1.0;
-        this.moonInfluence = 0.0;
-        this.pauseDayCycle = true;
-
         // wagon physics needs a real dt between frames
         this.lastUpdateTime = null;
 
-        // 'menu' on boot and after the wagon hits 0 HP; 'playing' once Play is clicked.
-        // Gameplay updates are gated on this so the world stays frozen under the menu.
-        this.gameState = 'menu';
-
-        // gameplay HP economy — spec reference values, tune as needed
-        this.maxHP = 100;
-        this.wagonHP = this.maxHP;
-        this.hpDecayPerSec = 1.0;
-
-        // score = whole seconds the wagon has stayed alive; freezes at HP 0.
-        // HP decay and score share one tick so the two readouts move in lockstep.
-        this.score = 0;
-        this._tickAccum = 0;
-
-        // delivery zone — circular drop spot in front of the barn. Bales carried
-        // by the wagon are consumed the instant the wagon enters the disc.
-        this.hpPerBaleDelivery = 20;
-        this.wagonInDeliveryZone = false;
-        this.balesDelivered = 0;
-
-        // hay bales scattered around the field; populated in init() once barn is placed
-        this.bales = [];
-        // reach point sits ahead of the wagon centre (near the horse), with a
-        // generous radius so the bale only needs to be in front of the rig
-        this.pickupReachOffset = 5.0;
-        this.balePickupRadius = 4.5;
-        this.prevPickupKey = false;
-        this.prevDropKey = false;
         // arrows only float above bales the wagon is close to, so finding them feels earned
         this.baleArrowRange = 55.0;
 
-        // default: directly behind the wagon. mouse X swings to either side.
-        this.cameraFollow = true;
-        this.cameraOffsetX = 0.0;
-        this.cameraOffsetY = 8.0;
-        this.cameraOffsetZ = 18.0;
-        this.cameraTargetUp = 4.0;
-        this.cameraSmoothTau = 0.4;
-        // separate tau so the rotational lag feels heavier than the translational follow
-        this.cameraHeadingTau = 0.9;
-        // smoothed heading the camera orbits around; matches wagon at rest
-        this.cameraHeading = 0;
-        // mouse position (no drag) tilts pitch (Y) and swings side-to-side (X)
-        this.cameraPitchOffset = 0;
-        this.cameraSideOffset = 0;
+        this.lighting = new MyLighting(this);
+        this.chaseCamera = new MyChaseCamera(this);
     }
 
     init(application) {
         super.init(application);
 
-        this.initCameras();
-        this.initLights();
+        this.chaseCamera.init();
+        this.lighting.init();
 
         this.gl.clearColor(0.53, 0.75, 0.96, 1.0);
         this.gl.clearDepth(100.0);
@@ -112,7 +64,6 @@ export class MyScene extends CGFscene {
         this.barn = new MyBarn(this);
         this.barnPos = { x: -20, z: -20 };
         this.terrain = new MyTerrain(this, 144, 3000, 12, 42);
-        this.bales = this._generateBales(22, 2024);
         // sits just in front of the barn door (barn front face at world Z = barnPos.z + 5)
         this.deliveryZone = new MyDeliveryZone(this, this.barnPos.x, this.barnPos.z + 12, 5.5, this.terrain);
         this.rockSet = new MyRockSet(this, this.terrain, 95, 520, 123);
@@ -177,7 +128,7 @@ export class MyScene extends CGFscene {
             uFlowerTexture: 2,
             uTerrainSize: 3000.0,
             uTerrainRadius: 1495.0,
-            uLightDir: this.sunDirection,
+            uLightDir: this.lighting.sunDirection,
             uAmbientStrength: 0.18,
             uDiffuseStrength: 0.65,
             uLamp0Pos: [0, 0, 0],
@@ -197,7 +148,7 @@ export class MyScene extends CGFscene {
         this.skyShader = new CGFshader(this.gl, "shaders/sky.vert", "shaders/sky.frag");
         this.moonTexture = new CGFtexture(this, "textures/environment/sky/moon.jpg");
         this.skyShader.setUniformsValues({
-            uSunDirection: this.sunDirection,
+            uSunDirection: this.lighting.sunDirection,
             uSunColor: [1.0, 0.92, 0.73],
             uMoonTexture: 0
         });
@@ -215,189 +166,10 @@ export class MyScene extends CGFscene {
             uSunInfluence: 1.0
         });
 
-        this._initMenu();
+        this.gameplay = new MyGameplay(this);
+        this.gameplay.init();
 
         this.setUpdatePeriod(50);
-    }
-
-    initCameras() {
-        // seed at the rest offset (wagon at origin, facing +X) so the camera
-        // starts behind the wagon and doesn't whip in on the first frame
-        const startEye = vec3.fromValues(-this.cameraOffsetZ, this.cameraOffsetY, this.cameraOffsetX);
-        const startTarget = vec3.fromValues(0, this.cameraTargetUp, 0);
-        this.camera = new CGFcamera(0.6, 0.1, 1000, startEye, startTarget);
-    }
-
-    initLights() {
-        this.setGlobalAmbientLight(0.18, 0.18, 0.20, 1.0);
-
-        if (this.lights.length > 0) {
-            this.lights[0].setPosition(this.sunDirection[0], this.sunDirection[1], this.sunDirection[2], 0);
-            this.lights[0].setAmbient(0.0, 0.0, 0.0, 1.0);
-            this.lights[0].setDiffuse(1.00, 0.95, 0.80, 1.0);
-            this.lights[0].setSpecular(0.90, 0.82, 0.70, 1.0);
-            this.lights[0].enable();
-            this.lights[0].update();
-        }
-
-        if (this.lights.length > 1) {
-            this.lights[1].setPosition(45, 85, -30, 1);
-            this.lights[1].setAmbient(0.05, 0.05, 0.05, 1.0);
-            this.lights[1].setDiffuse(1.00, 0.90, 0.70, 1.0);
-            this.lights[1].setSpecular(0.80, 0.70, 0.60, 1.0);
-            this.lights[1].setSpotDirection(-45, -85, 30);
-            this.lights[1].setSpotExponent(8);
-            this.lights[1].setSpotCutOff(55);
-            this.lights[1].enable();
-            this.lights[1].update();
-        }
-
-        if (this.lights.length > 2) {
-            this.lights[2].setPosition(1.3, 1.3, 0.75, 1); // lamp 1
-            this.lights[2].setAmbient(0, 0, 0, 1);
-            this.lights[2].setDiffuse(1.0, 0.7, 0.2, 1); // warm
-            this.lights[2].setSpecular(1.0, 0.7, 0.2, 1);
-            this.lights[2].setConstantAttenuation(0.4);
-            this.lights[2].setLinearAttenuation(0.08);
-            this.lights[2].setQuadraticAttenuation(0.012);
-            this.lights[2].disable();
-            this.lights[2].update();
-        }
-
-        if (this.lights.length > 3) {
-            this.lights[3].setPosition(1.3, 1.3, -0.75, 1); // lamp 2
-            this.lights[3].setAmbient(0, 0, 0, 1);
-            this.lights[3].setDiffuse(1.0, 0.7, 0.2, 1); // warm
-            this.lights[3].setSpecular(1.0, 0.7, 0.2, 1);
-            this.lights[3].setConstantAttenuation(0.1);
-            this.lights[3].setLinearAttenuation(0.2);
-            this.lights[3].setQuadraticAttenuation(0.1);
-            this.lights[3].disable();
-            this.lights[3].update();
-        }
-
-        if (this.lights.length > 3) {
-            this.lights[3].setPosition(1.4, 1.45, -0.6, 1); // lamp 2
-            this.lights[3].setAmbient(0, 0, 0, 1);
-            this.lights[3].setDiffuse(1.0, 0.7, 0.2, 1); // warm
-            this.lights[3].setSpecular(1.0, 0.7, 0.2, 1);
-            this.lights[3].setConstantAttenuation(0.1);
-            this.lights[3].setLinearAttenuation(0.2);
-            this.lights[3].setQuadraticAttenuation(0.1);
-            this.lights[3].disable();
-            this.lights[3].update();
-        }
-
-        this.applyDynamicLighting();
-    }
-
-    smoothstep(edge0, edge1, x) {
-        const t = Math.max(0.0, Math.min(1.0, (x - edge0) / (edge1 - edge0)));
-        return t * t * (3.0 - 2.0 * t);
-    }
-
-    applyDynamicLighting() {
-        const sunElevation = this.sunDirection[1];
-
-        // blend sun/moon through twilight for gradual transitions
-        this.sunInfluence = this.smoothstep(-0.12, 0.32, sunElevation);
-        this.moonInfluence = 1.0 - this.smoothstep(-0.32, 0.12, sunElevation);
-
-        const ambientNight = [0.10, 0.11, 0.16];
-        const ambientDay = [0.24, 0.24, 0.22];
-        const ambientR = ambientNight[0] + (ambientDay[0] - ambientNight[0]) * this.sunInfluence;
-        const ambientG = ambientNight[1] + (ambientDay[1] - ambientNight[1]) * this.sunInfluence;
-        const ambientB = ambientNight[2] + (ambientDay[2] - ambientNight[2]) * this.sunInfluence;
-        this.setGlobalAmbientLight(ambientR, ambientG, ambientB, 1.0);
-
-        let activeDir = this.sunDirection;
-
-        if (this.lights.length > 0) {
-            const dayStrength = 0.25 + 0.95 * this.sunInfluence;
-            const twilightWarmth = 1.0 - this.smoothstep(0.05, 0.45, sunElevation);
-            const dayColor = [
-                1.0,
-                0.86 + 0.10 * (1.0 - twilightWarmth),
-                0.64 + 0.22 * (1.0 - twilightWarmth)
-            ];
-
-            const moonStrength = 0.08 + 0.24 * this.moonInfluence;
-            const moonColor = [0.38, 0.46, 0.62];
-
-            const diffuseR = dayColor[0] * dayStrength * this.sunInfluence + moonColor[0] * moonStrength * this.moonInfluence;
-            const diffuseG = dayColor[1] * dayStrength * this.sunInfluence + moonColor[1] * moonStrength * this.moonInfluence;
-            const diffuseB = dayColor[2] * dayStrength * this.sunInfluence + moonColor[2] * moonStrength * this.moonInfluence;
-
-            const daySpec = 0.05 + 0.80 * this.sunInfluence;
-            const moonSpec = 0.02 + 0.10 * this.moonInfluence;
-            const specR = daySpec * this.sunInfluence + moonSpec * this.moonInfluence;
-            const specG = (daySpec * 0.95) * this.sunInfluence + (moonSpec * 1.05) * this.moonInfluence;
-            const specB = (daySpec * 0.85) * this.sunInfluence + (moonSpec * 1.20) * this.moonInfluence;
-
-            activeDir = (this.sunInfluence >= this.moonInfluence) ? this.sunDirection : this.moonDirection;
-            this.lights[0].setPosition(activeDir[0], activeDir[1], activeDir[2], 0);
-            this.lights[0].setDiffuse(diffuseR, diffuseG, diffuseB, 1.0);
-            this.lights[0].setSpecular(specR, specG, specB, 1.0);
-        }
-
-        if (this.terrainShader) {
-            const terrainAmbient = 0.08 + 0.22 * this.sunInfluence;
-            const terrainDiffuse = 0.08 + 0.57 * this.sunInfluence;
-            this.terrainShader.setUniformsValues({
-                uLightDir: activeDir,
-                uAmbientStrength: terrainAmbient,
-                uDiffuseStrength: terrainDiffuse
-            });
-        }
-
-        if (this.lights.length > 2) {
-            // lamps on when sun is low
-            if (this.moonInfluence > 0.5) {
-                this.lights[2].enable();
-                if (this.lights.length > 3) this.lights[3].enable();
-            } else {
-                this.lights[2].disable();
-                if (this.lights.length > 3) this.lights[3].disable();
-            }
-        }
-
-        this.updateLampPositions();
-    }
-
-    updateLampPositions() {
-        if (!this.wagon) return;
-
-        // lamp positions in the wagon's pre-scale local frame
-        const lampsLocal = [
-            [1.3, 1.1,  0.75],
-            [1.3, 1.1, -0.75]
-        ];
-
-        const cosH = Math.cos(this.wagon.heading);
-        const sinH = Math.sin(this.wagon.heading);
-        const scale = 1.5; // matches WAGON_SCALE inside MyWagon.display
-
-        const world = lampsLocal.map(([lx, ly, lz]) => [
-            this.wagon.position[0] + scale * (lx * cosH + lz * sinH),
-            this.wagon.position[1] + scale * ly,
-            this.wagon.position[2] + scale * (-lx * sinH + lz * cosH)
-        ]);
-
-        if (this.lights.length > 2) {
-            this.lights[2].setPosition(world[0][0], world[0][1], world[0][2], 1);
-        }
-        if (this.lights.length > 3) {
-            this.lights[3].setPosition(world[1][0], world[1][1], world[1][2], 1);
-        }
-
-        // terrain runs its own shader, so feed it the lamp world positions
-        if (this.terrainShader) {
-            this.terrainShader.setUniformsValues({
-                uLamp0Pos: world[0],
-                uLamp1Pos: world[1],
-                uLampStrength: this.moonInfluence > 0.5 ? 1.0 : 0.0
-            });
-        }
     }
 
     update(t) {
@@ -411,47 +183,18 @@ export class MyScene extends CGFscene {
         this.lastUpdateTime = t;
         this.currentTime = t;
 
-        const playing = this.gameState === 'playing';
+        const playing = this.gameplay.isPlaying();
 
         if (playing && dt > 0) {
-            this._tickAccum += dt;
-            while (this._tickAccum >= 1) {
-                this._tickAccum -= 1;
-                if (this.wagonHP > 0) {
-                    this.wagonHP = Math.max(0, this.wagonHP - this.hpDecayPerSec);
-                    this.score += 1;
-                }
-            }
+            this.gameplay.tick(dt);
         }
 
-        if (!this.pauseDayCycle) {
-            this.dayTime = (t / 1000.0) * this.dayCycleSpeed;
-        }
-        this.sunDirection = vec3.fromValues(
-            Math.cos(this.dayTime),
-            Math.sin(this.dayTime),
-            0.6
-        );
-        this.moonDirection = vec3.fromValues(
-            -this.sunDirection[0],
-            -this.sunDirection[1],
-            -this.sunDirection[2]
-        );
+        this.lighting.update(t, playing);
 
         // clouds and grass are time-driven — freeze them with the rest of the world while menu is up
         if (playing) {
             this.cloudOffset = ((t / 1000.0) * this.cloudSpeed) % 1000.0;
-        }
-
-        this.skyShader.setUniformsValues({
-            uSunDirection: this.sunDirection,
-            uMoonDirection: this.moonDirection
-        });
-
-        this.applyDynamicLighting();
-
-        if (playing) {
-            this.grassSet.update(t, this.sunInfluence);
+            this.grassSet.update(t, this.lighting.sunInfluence);
         }
 
         if (playing && this.wagon && dt > 0) {
@@ -461,169 +204,20 @@ export class MyScene extends CGFscene {
                 this.wagon.position[0],
                 this.wagon.position[2]
             );
-            this.applyWagonTerrainTilt(dt);
-            this.handleHayBaleKeys();
-            this.applyImpactDamage();
-            this.applyDelivery();
-            if (this.cameraFollow) this.updateChaseCamera(dt);
+            this.wagon.applyTerrainTilt(this.terrain, dt);
+            this.gameplay.handleHayBaleKeys();
+            this.gameplay.applyImpactDamage();
+            this.gameplay.applyDelivery();
+            if (this.chaseCamera.follow) this.chaseCamera.update(dt);
         }
 
         this.updateTerrainEnvironment();
-        this.updateHUD();
+        this.gameplay.updateHUD();
 
         // bounce back to menu the moment the wagon dies (HUD already shows the final HP=0 + score)
-        if (playing && this.wagonHP <= 0) {
-            this.showMenu();
+        if (playing && this.gameplay.wagonHP <= 0) {
+            this.gameplay.showMenu();
         }
-    }
-
-    updateHUD() {
-        // cache the DOM lookups once; readouts are pushed each frame so they
-        // mirror the dat.GUI controllers without an extra render layer
-        if (!this._hudElems) {
-            this._hudElems = {
-                hp: document.getElementById("hud-hp-value"),
-                score: document.getElementById("hud-score-value"),
-                bales: document.getElementById("hud-bales-value")
-            };
-        }
-        if (this._hudElems.hp) this._hudElems.hp.textContent = Math.round(this.wagonHP);
-        if (this._hudElems.score) this._hudElems.score.textContent = this.score;
-        if (this._hudElems.bales) this._hudElems.bales.textContent = this.balesDelivered;
-    }
-
-    _initMenu() {
-        this._menuEl = document.getElementById("menu");
-        const playBtn = document.getElementById("menu-play");
-        if (playBtn) playBtn.addEventListener("click", () => this.startGame());
-        // first frame opens on the menu; nothing to toggle here
-    }
-
-    showMenu() {
-        this.gameState = 'menu';
-        if (this._menuEl) this._menuEl.classList.remove("hidden");
-    }
-
-    startGame() {
-        // wipe the previous run's state so a Play after game-over starts clean
-        this.wagonHP = this.maxHP;
-        this.score = 0;
-        this.balesDelivered = 0;
-        this._tickAccum = 0;
-        this.wagonInDeliveryZone = false;
-        this.prevPickupKey = false;
-        this.prevDropKey = false;
-
-        this.bales = this._generateBales(22, 2024);
-
-        if (this.wagon) {
-            this.wagon.position[0] = 0;
-            this.wagon.position[1] = this.terrain ? this.terrain.getTerrainHeight(0, 0) : 0;
-            this.wagon.position[2] = 0;
-            this.wagon.heading = 0;
-            this.wagon.speed = 0;
-            this.wagon.pitch = 0;
-            this.wagon.roll = 0;
-            this.wagon.frontSpin = 0;
-            this.wagon.rearSpin = 0;
-            this.wagon.carriedBales = [];
-            this.wagon.activeCollisionIds = new Set();
-            this.wagon.newCollisionIds = [];
-        }
-
-        // snap the chase camera straight behind the wagon so it doesn't fly back from the death spot
-        if (this.camera) {
-            const spawnY = this.terrain ? this.terrain.getTerrainHeight(0, 0) : 0;
-            this.cameraHeading = 0;
-            this.cameraPitchOffset = 0;
-            this.cameraSideOffset = 0;
-            this.camera.position[0] = -this.cameraOffsetZ;
-            this.camera.position[1] = spawnY + this.cameraOffsetY;
-            this.camera.position[2] = 0;
-            this.camera.target[0] = 0;
-            this.camera.target[1] = spawnY + this.cameraTargetUp;
-            this.camera.target[2] = 0;
-        }
-
-        if (this._menuEl) this._menuEl.classList.add("hidden");
-        this.gameState = 'playing';
-    }
-
-    _generateBales(count, seed) {
-        const bales = [];
-        const TWO_PI = Math.PI * 2;
-        const terrainSize = 3000;
-        const maxDist = 460;
-        const minDist = 18;
-
-        const hash = (n) => {
-            let h = ((n + seed * 919) * 374761393) | 0;
-            h = (h ^ (h >>> 13)) * 1274126177;
-            return ((h ^ (h >>> 16)) >>> 0) / 0xffffffff;
-        };
-
-        let attempts = 0;
-        while (bales.length < count && attempts < count * 60) {
-            const i = attempts;
-            attempts++;
-            const angle = hash(i * 3) * TWO_PI;
-            const dist = minDist + Math.sqrt(hash(i * 3 + 1)) * (maxDist - minDist);
-            const x = Math.cos(angle) * dist;
-            const z = Math.sin(angle) * dist;
-
-            // keep bales off the dirt roads (world-unit path math)
-            const c1 = 85.0 * Math.sin(z * 0.0042 + 3.9)
-                     + 28.0 * Math.sin(z * 0.013 + 5.4);
-            const c2 = -40.0 + 55.0 * Math.sin(x * 0.0048 + 4.7)
-                            + 22.0 * Math.sin(x * 0.011 + 1.3);
-            if (Math.abs(x - c1) < 9) continue;
-            if (Math.abs(z - c2) < 9) continue;
-
-            // keep clear of the barn and the wagon spawn
-            const dxBarn = x - this.barnPos.x;
-            const dzBarn = z - this.barnPos.z;
-            if (dxBarn * dxBarn + dzBarn * dzBarn < 90) continue;
-
-            // small no-spawn ring around origin where the wagon starts
-            if (x * x + z * z < 80) continue;
-
-            bales.push({ pos: [x, 0, z], held: false });
-        }
-        return bales;
-    }
-
-    applyWagonTerrainTilt(dt) {
-        const w = this.wagon;
-        const cosH = Math.cos(w.heading);
-        const sinH = Math.sin(w.heading);
-
-        // wheelbase/track in world units; mirrors MyWagon's wheel offsets
-        const halfWheelbase = 1.1 * 1.5;
-        const halfTrack     = 1.1 * 1.5;
-
-        const fx = w.position[0] + halfWheelbase * cosH;
-        const fz = w.position[2] - halfWheelbase * sinH;
-        const rx = w.position[0] - halfWheelbase * cosH;
-        const rz = w.position[2] + halfWheelbase * sinH;
-
-        const leftX  = w.position[0] - halfTrack * sinH;
-        const leftZ  = w.position[2] - halfTrack * cosH;
-        const rightX = w.position[0] + halfTrack * sinH;
-        const rightZ = w.position[2] + halfTrack * cosH;
-
-        const hf = this.terrain.getTerrainHeight(fx, fz);
-        const hr = this.terrain.getTerrainHeight(rx, rz);
-        const hl = this.terrain.getTerrainHeight(leftX, leftZ);
-        const hri = this.terrain.getTerrainHeight(rightX, rightZ);
-
-        const targetPitch = Math.atan2(hf - hr, halfWheelbase * 2.0);
-        // right-side-higher rolls the body LEFT (away from the rise), so flip sign
-        const targetRoll  = Math.atan2(hl - hri, halfTrack * 2.0);
-
-        // smooth so quick bumps don't make the body shake
-        const k = 1.0 - Math.exp(-dt / 0.12);
-        w.pitch += (targetPitch - w.pitch) * k;
-        w.roll  += (targetRoll  - w.roll)  * k;
     }
 
     updateTerrainEnvironment() {
@@ -641,7 +235,7 @@ export class MyScene extends CGFscene {
 
         const baleSlots = [aoOff, aoOff, aoOff];
         let slot = 0;
-        for (const bale of this.bales) {
+        for (const bale of this.gameplay.bales) {
             if (bale.held || slot >= 3) continue;
             baleSlots[slot++] = [bale.pos[0], bale.pos[2], 1.8, 0.5];
         }
@@ -656,48 +250,6 @@ export class MyScene extends CGFscene {
         });
     }
 
-    updateChaseCamera(dt) {
-        const w = this.wagon;
-
-        // chase the wagon's heading on a slower timescale so the camera
-        // visibly trails behind when the wagon turns
-        const kHead = 1.0 - Math.exp(-dt / this.cameraHeadingTau);
-        let dh = w.heading - this.cameraHeading;
-        // shortest-path wrap so we don't take the long way around the circle
-        while (dh > Math.PI) dh -= 2 * Math.PI;
-        while (dh < -Math.PI) dh += 2 * Math.PI;
-        this.cameraHeading += dh * kHead;
-
-        // offsets are wagon-local: X is rightward, Y is up, Z is backward
-        const cosH = Math.cos(this.cameraHeading);
-        const sinH = Math.sin(this.cameraHeading);
-
-        const side = this.cameraOffsetX + this.cameraSideOffset;
-        const back = this.cameraOffsetZ;
-
-        const desiredEyeX = w.position[0] + side * sinH - back * cosH;
-        const desiredEyeY = w.position[1] + this.cameraOffsetY;
-        const desiredEyeZ = w.position[2] + side * cosH + back * sinH;
-
-        // mouse-driven pitch raises/lowers the target so the camera tilts up to the sky
-        const desiredTgtX = w.position[0];
-        const desiredTgtY = w.position[1] + this.cameraTargetUp + this.cameraPitchOffset;
-        const desiredTgtZ = w.position[2];
-
-        // frame-rate independent exponential smoothing
-        const k = 1.0 - Math.exp(-dt / this.cameraSmoothTau);
-
-        const eye = this.camera.position;
-        eye[0] += (desiredEyeX - eye[0]) * k;
-        eye[1] += (desiredEyeY - eye[1]) * k;
-        eye[2] += (desiredEyeZ - eye[2]) * k;
-
-        const tgt = this.camera.target;
-        tgt[0] += (desiredTgtX - tgt[0]) * k;
-        tgt[1] += (desiredTgtY - tgt[1]) * k;
-        tgt[2] += (desiredTgtZ - tgt[2]) * k;
-    }
-
     getColliders() {
         const colliders = this.rockSet ? this.rockSet.getColliders() : [];
 
@@ -706,103 +258,13 @@ export class MyScene extends CGFscene {
 
         // every grounded hay bale is a soft collider so the horse can muzzle
         // up to it, but the wagon bed still bumps into it
-        for (const bale of this.bales) {
+        for (const bale of this.gameplay.bales) {
             if (!bale.held) {
                 colliders.push({ x: bale.pos[0], z: bale.pos[2], radius: 1.5, soft: true });
             }
         }
 
         return colliders;
-    }
-
-    applyImpactDamage() {
-        // each new contact with a damaging collider takes a random 5..15 HP bite;
-        // wagon's edge-detection guarantees a single hit per contact event
-        const hits = this.wagon.newCollisionIds;
-        if (!hits || hits.length === 0) return;
-        for (let i = 0; i < hits.length; i++) {
-            const damage = 5 + Math.floor(Math.random() * 11);
-            this.wagonHP = Math.max(0, this.wagonHP - damage);
-        }
-    }
-
-    applyDelivery() {
-        if (!this.deliveryZone || !this.wagon) return;
-        const inside = this.deliveryZone.contains(this.wagon.position[0], this.wagon.position[2]);
-        // edge-detected: deliveries fire once per zone entry, not every frame inside
-        if (inside && !this.wagonInDeliveryZone) {
-            const carried = this.wagon.carriedBales;
-            if (carried && carried.length > 0) {
-                const restored = carried.length * this.hpPerBaleDelivery;
-                this.wagonHP = Math.min(this.maxHP, this.wagonHP + restored);
-                this.balesDelivered += carried.length;
-                const deliveredSet = new Set(carried);
-                this.bales = this.bales.filter(b => !deliveredSet.has(b));
-                this.wagon.carriedBales = [];
-            }
-        }
-        this.wagonInDeliveryZone = inside;
-    }
-
-    handleHayBaleKeys() {
-        if (!this.gui) return;
-        const pickupKey = this.gui.isKeyPressed("KeyP");
-        const dropKey = this.gui.isKeyPressed("KeyL");
-
-        // pickup: find the nearest grounded bale inside the reach circle
-        if (pickupKey && !this.prevPickupKey && !this.wagon.isFull()) {
-            const reachX = this.wagon.position[0] + this.pickupReachOffset * Math.cos(this.wagon.heading);
-            const reachZ = this.wagon.position[2] - this.pickupReachOffset * Math.sin(this.wagon.heading);
-            const r2 = this.balePickupRadius * this.balePickupRadius;
-            let best = null;
-            let bestDist = Infinity;
-            for (const bale of this.bales) {
-                if (bale.held) continue;
-                const dx = reachX - bale.pos[0];
-                const dz = reachZ - bale.pos[2];
-                const d2 = dx * dx + dz * dz;
-                if (d2 <= r2 && d2 < bestDist) {
-                    best = bale;
-                    bestDist = d2;
-                }
-            }
-            if (best) this.wagon.pickup(best);
-        }
-
-        // drop the most recently picked-up bale at the rear of the wagon
-        if (dropKey && !this.prevDropKey && this.wagon.carriedBales.length > 0) {
-            const dropPos = this.wagon.dropPosition();
-            const released = this.wagon.releaseBale();
-            if (released) {
-                released.pos[0] = dropPos[0];
-                released.pos[1] = 0;
-                released.pos[2] = dropPos[2];
-            }
-        }
-
-        this.prevPickupKey = pickupKey;
-        this.prevDropKey = dropKey;
-    }
-
-    updateLightStates() {
-        if (this.lights.length > 0) {
-            if (this.sunLightEnabled) this.lights[0].enable();
-            else this.lights[0].disable();
-            this.lights[0].update();
-        }
-
-        if (this.lights.length > 1) {
-            if (this.spotLightEnabled) this.lights[1].enable();
-            else this.lights[1].disable();
-            this.lights[1].update();
-        }
-
-        if (this.lights.length > 2) {
-            this.lights[2].update();
-        }
-        if (this.lights.length > 3) {
-            this.lights[3].update();
-        }
     }
 
     displaySkyDome() {
@@ -818,7 +280,7 @@ export class MyScene extends CGFscene {
 
         this.skyAppearance.apply();
         this.setActiveShader(this.skyShader);
-        this.skyShader.setUniformsValues({ uSunDirection: this.sunDirection });
+        this.skyShader.setUniformsValues({ uSunDirection: this.lighting.sunDirection });
         this.moonTexture.bind(0);
         this.skyDome.display();
 
@@ -889,7 +351,7 @@ export class MyScene extends CGFscene {
         this.loadIdentity();
         this.applyViewMatrix();
 
-        this.updateLightStates();
+        this.lighting.updateLightStates();
 
         if (this.showSky) {
             this.gl.depthMask(false);
@@ -939,7 +401,7 @@ export class MyScene extends CGFscene {
         if (this.deliveryZone) {
             this.pushMatrix();
             this.translate(0, this.terrainYOffset, 0);
-            this.deliveryZone.display(this.wagonInDeliveryZone);
+            this.deliveryZone.display(this.gameplay.wagonInDeliveryZone);
             this.popMatrix();
         }
 
@@ -949,7 +411,7 @@ export class MyScene extends CGFscene {
         const baleCullDistSq = 160 * 160;
         const arrowRangeSq = this.baleArrowRange * this.baleArrowRange;
 
-        for (const bale of this.bales) {
+        for (const bale of this.gameplay.bales) {
             if (bale.held) continue;
             const cdx = bale.pos[0] - camX;
             const cdz = bale.pos[2] - camZ;
@@ -966,7 +428,7 @@ export class MyScene extends CGFscene {
 
         // batch the arrows under one shader bind so we don't switch per bale
         this.hayBaleArrow.beginBatch();
-        for (const bale of this.bales) {
+        for (const bale of this.gameplay.bales) {
             if (bale.held) continue;
             const dx = bale.pos[0] - this.wagon.position[0];
             const dz = bale.pos[2] - this.wagon.position[2];
@@ -1000,8 +462,8 @@ export class MyScene extends CGFscene {
             uFogColor: hazeColor,
             uFogStrength: 0.55,
             uPanoramaHeight: this.mountainFarPanorama.height,
-            uSunInfluence: this.sunInfluence,
-            uSunDir: this.sunDirection
+            uSunInfluence: this.lighting.sunInfluence,
+            uSunDir: this.lighting.sunDirection
         });
         this.mountainFarPanorama.display();
         this.popMatrix();
@@ -1016,8 +478,8 @@ export class MyScene extends CGFscene {
             uFogColor: hazeColor,
             uFogStrength: 0.22,
             uPanoramaHeight: this.mountainPanorama.height,
-            uSunInfluence: this.sunInfluence,
-            uSunDir: this.sunDirection
+            uSunInfluence: this.lighting.sunInfluence,
+            uSunDir: this.lighting.sunDirection
         });
         this.mountainPanorama.display();
         this.popMatrix();
@@ -1029,12 +491,12 @@ export class MyScene extends CGFscene {
     }
 
     getMountainHazeColor() {
-        const sunElevation = this.sunDirection[1];
+        const sunElevation = this.lighting.sunDirection[1];
         const day = [0.75, 0.85, 0.95];
         const sunset = [0.92, 0.62, 0.45];
         const night = [0.12, 0.15, 0.22];
-        const daySunsetMix = this.smoothstep(-0.15, 0.35, sunElevation);
-        const sunsetNightMix = this.smoothstep(-0.5, -0.1, sunElevation);
+        const daySunsetMix = MyLighting.smoothstep(-0.15, 0.35, sunElevation);
+        const sunsetNightMix = MyLighting.smoothstep(-0.5, -0.1, sunElevation);
         const out = [0, 0, 0];
         for (let i = 0; i < 3; i++) {
             const sd = sunset[i] + (day[i] - sunset[i]) * daySunsetMix;

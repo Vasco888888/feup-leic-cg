@@ -199,6 +199,40 @@ export class MyWagon extends CGFobject {
         this.rearSpin += dist / REAR_WHEEL_RADIUS_WORLD;
     }
 
+    // sample terrain height at each wheel and lean the body to match the slope
+    applyTerrainTilt(terrain, dt) {
+        const cosH = Math.cos(this.heading);
+        const sinH = Math.sin(this.heading);
+
+        // wheelbase/track in world units; mirrors the wheel offsets above
+        const halfWheelbase = FRONT_WHEEL_OFFSET_X * WAGON_SCALE;
+        const halfTrack     = WHEEL_OFFSET_Z * WAGON_SCALE;
+
+        const fx = this.position[0] + halfWheelbase * cosH;
+        const fz = this.position[2] - halfWheelbase * sinH;
+        const rx = this.position[0] - halfWheelbase * cosH;
+        const rz = this.position[2] + halfWheelbase * sinH;
+
+        const leftX  = this.position[0] - halfTrack * sinH;
+        const leftZ  = this.position[2] - halfTrack * cosH;
+        const rightX = this.position[0] + halfTrack * sinH;
+        const rightZ = this.position[2] + halfTrack * cosH;
+
+        const hf = terrain.getTerrainHeight(fx, fz);
+        const hr = terrain.getTerrainHeight(rx, rz);
+        const hl = terrain.getTerrainHeight(leftX, leftZ);
+        const hri = terrain.getTerrainHeight(rightX, rightZ);
+
+        const targetPitch = Math.atan2(hf - hr, halfWheelbase * 2.0);
+        // right-side-higher rolls the body LEFT (away from the rise), so flip sign
+        const targetRoll  = Math.atan2(hl - hri, halfTrack * 2.0);
+
+        // smooth so quick bumps don't make the body shake
+        const k = 1.0 - Math.exp(-dt / 0.12);
+        this.pitch += (targetPitch - this.pitch) * k;
+        this.roll  += (targetRoll  - this.roll)  * k;
+    }
+
     pickup(baleEntry) {
         if (this.carriedBales.length >= this.maxBales) return false;
         this.carriedBales.push(baleEntry);
