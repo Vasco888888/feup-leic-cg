@@ -1,17 +1,17 @@
 import { CGFapplication } from "../lib/CGF.js";
-import { MyScene } from "./MyScene.js";
-import { MyInterface } from "./MyInterface.js";
+import { MyScene } from "./src/MyScene.js";
+import { MyInterface } from "./src/MyInterface.js";
 
 function main() {
     const app = new CGFapplication(document.body);
     const scene = new MyScene();
-    const gui = new MyInterface();
+    const myInterface = new MyInterface();
 
     app.init();
     app.setScene(scene);
-    app.setInterface(gui);
+    app.setInterface(myInterface);
 
-    gui.setActiveCamera(scene.camera);
+    myInterface.setActiveCamera(scene.camera);
 
     app.run();
 }
