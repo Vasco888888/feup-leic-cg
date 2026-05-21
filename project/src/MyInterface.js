@@ -3,7 +3,7 @@ import { CGFinterface, dat } from "../../lib/CGF.js";
 // Keyboard/mouse plumbing and the dat.GUI panel. The numeric bars (HP,
 // instantaneous damage, instantaneous health restored, bales delivered, score)
 // read live from MyGameplay via .listen().
-export class MyInput extends CGFinterface {
+export class MyInterface extends CGFinterface {
     constructor() {
         super();
     }
