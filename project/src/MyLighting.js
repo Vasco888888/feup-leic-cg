@@ -1,15 +1,15 @@
 // Sun/moon directional light, the two wagon lamps, and the day/night cycle
 // that drives ambient + diffuse blending across the directional light, the
 // terrain shader, and the sky/mountain tints. Owned by MyScene as
-// `scene.lighting` and pushes uniforms onto scene.skyShader / scene.terrainShader.
+// `scene.lighting`; pushes uniforms onto scene.skyShader and scene.terrainShader.
 export class MyLighting {
     constructor(scene) {
         this.scene = scene;
 
         this.sunDirection = vec3.fromValues(-0.35, 0.72, 0.60);
         this.moonDirection = vec3.fromValues(0.35, -0.72, -0.60);
-        // one full sun-arc per real-time minute
-        this.dayCycleSpeed = (2 * Math.PI) / 60;
+        // one full sun-arc per 2 min 30 s of real time
+        this.dayCycleSpeed = (2 * Math.PI) / 150;
         // start a bit past noon so the first frame of Play looks like daylight
         this.dayTime = Math.PI / 2.5;
 
@@ -32,9 +32,7 @@ export class MyLighting {
         }
 
         if (scene.lights.length > 1) {
-            // legacy debug spotlight — kept configured but disabled. Previously the
-            // dat.GUI panel toggled it; without that UI it was leaking on at all hours
-            // and washing out flowers/rocks once the sun went down.
+            // secondary spotlight, disabled by default
             scene.lights[1].setPosition(45, 85, -30, 1);
             scene.lights[1].setAmbient(0.05, 0.05, 0.05, 1.0);
             scene.lights[1].setDiffuse(1.00, 0.90, 0.70, 1.0);
@@ -46,9 +44,9 @@ export class MyLighting {
             scene.lights[1].update();
         }
 
-        // two warm lamps mounted on the wagon — positions are wagon-local and get
-        // re-pushed each frame in updateLampPositions(). Initial values here are
-        // just so the lights have valid state before the first update.
+        // two warm lamps mounted on the wagon — positions are wagon-local and
+        // re-pushed each frame in _updateLampPositions(); these initial values
+        // just give the lights valid state before the first update.
         if (scene.lights.length > 2) {
             scene.lights[2].setPosition(1.3, 1.3, 0.75, 1); // lamp 1
             scene.lights[2].setAmbient(0, 0, 0, 1);
@@ -77,7 +75,7 @@ export class MyLighting {
     }
 
     update(t, dt, playing) {
-        // dt-accumulated so the cycle freezes cleanly while the menu is up
+        // dt-accumulated so the cycle freezes while the menu is up
         if (playing && dt > 0) {
             this.dayTime += dt * this.dayCycleSpeed;
         }

@@ -212,9 +212,8 @@ export class MyScene extends CGFscene {
         }
 
         this.updateTerrainEnvironment();
-        this.gameplay.updateHUD();
 
-        // bounce back to menu the moment the wagon dies (HUD already shows the final HP=0 + score)
+        // return to menu the moment the wagon dies
         if (playing && this.gameplay.wagonHP <= 0) {
             this.gameplay.showMenu();
         }
@@ -255,6 +254,17 @@ export class MyScene extends CGFscene {
 
         // barn footprint: 10x10 square, treated as a tight circle
         colliders.push({ x: this.barnPos.x, z: this.barnPos.z, radius: 6.5 });
+
+        // silos and other barn-side props expose their own local footprints
+        if (this.barn && this.barn.getColliders) {
+            for (const c of this.barn.getColliders()) {
+                colliders.push({
+                    x: this.barnPos.x + c.localX,
+                    z: this.barnPos.z + c.localZ,
+                    radius: c.radius
+                });
+            }
+        }
 
         // every grounded hay bale is a soft collider so the horse can muzzle
         // up to it, but the wagon bed still bumps into it
@@ -394,7 +404,10 @@ export class MyScene extends CGFscene {
         this.popMatrix();
 
         this.pushMatrix();
-        this.translate(this.barnPos.x, this.terrainYOffset, this.barnPos.z);
+        // sit the barn on the terrain at its centre; MyBarn sinks itself a bit
+        // more to keep the foundation embedded as the terrain undulates
+        const barnY = this.terrain ? this.terrain.getTerrainHeight(this.barnPos.x, this.barnPos.z) : 0;
+        this.translate(this.barnPos.x, this.terrainYOffset + barnY, this.barnPos.z);
         this.barn.display();
         this.popMatrix();
 

@@ -56,7 +56,7 @@ export class MyDeliveryZone extends CGFobject {
             const b = a + 1;
             const c = a + 2;
             const d = a + 3;
-            // winding chosen so the normal points to +Y (up); see commit notes
+            // winding chosen so the face normal points to +Y (up)
             this.indices.push(a, c, b);
             this.indices.push(b, c, d);
         }

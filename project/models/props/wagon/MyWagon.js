@@ -295,7 +295,7 @@ export class MyWagon extends CGFobject {
         this.wheel.display();
         this.scene.popMatrix();
 
-        // tongue and horse still pivot together on the kingpin
+        // tongue and horse pivot together on the kingpin
         this.scene.pushMatrix();
         this.scene.translate(FRONT_WHEEL_OFFSET_X, FRONT_WHEEL_Y, 0);
         this.scene.rotate(this.steering, 0, 1, 0);
