@@ -84,13 +84,13 @@ export class MyWagon extends CGFobject {
     }
 
     update(dtSeconds, colliders = []) {
-        const gui = this.scene.gui;
-        if (!gui) return;
+        const input = this.scene.input;
+        if (!input) return;
 
-        const wPressed = gui.isKeyPressed("KeyW");
-        const sPressed = gui.isKeyPressed("KeyS");
-        const aPressed = gui.isKeyPressed("KeyA");
-        const dPressed = gui.isKeyPressed("KeyD");
+        const wPressed = input.isKeyPressed("KeyW");
+        const sPressed = input.isKeyPressed("KeyS");
+        const aPressed = input.isKeyPressed("KeyA");
+        const dPressed = input.isKeyPressed("KeyD");
 
         // longitudinal physics: forward-only, kinematic acceleration
         if (wPressed) {

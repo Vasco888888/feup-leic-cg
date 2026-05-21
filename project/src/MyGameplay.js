@@ -153,9 +153,9 @@ export class MyGameplay {
 
     handleHayBaleKeys() {
         const scene = this.scene;
-        if (!scene.gui) return;
-        const pickupKey = scene.gui.isKeyPressed("KeyP");
-        const dropKey = scene.gui.isKeyPressed("KeyL");
+        if (!scene.input) return;
+        const pickupKey = scene.input.isKeyPressed("KeyP");
+        const dropKey = scene.input.isKeyPressed("KeyL");
 
         // pickup: find the nearest grounded bale inside the reach circle
         if (pickupKey && !this.prevPickupKey && !scene.wagon.isFull()) {

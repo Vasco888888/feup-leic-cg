@@ -1,10 +1,10 @@
-import { CGFinterface } from "../lib/CGF.js";
+import { CGFinterface } from "../../lib/CGF.js";
 
 // Input plumbing only — the CGF harness requires app.setInterface() to receive
-// a CGFinterface, and the wagon + gameplay read keys via scene.gui.
+// a CGFinterface, and the wagon + gameplay read keys via scene.input.
 // No dat.GUI panel: tuning was done during development and the values are now
 // baked into the scene/lighting/wagon constructors.
-export class MyInterface extends CGFinterface {
+export class MyInput extends CGFinterface {
     constructor() {
         super();
     }
@@ -12,8 +12,8 @@ export class MyInterface extends CGFinterface {
     init(application) {
         super.init(application);
 
-        // scene reads input via scene.gui.isKeyPressed(...)
-        this.scene.gui = this;
+        // scene reads input via scene.input.isKeyPressed(...)
+        this.scene.input = this;
         // suppress CGFinterface's built-in WASD camera handling so the wagon owns those keys
         this.processKeyboard = function () {};
         this.activeKeys = {};
