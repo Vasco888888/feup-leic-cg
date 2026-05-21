@@ -80,10 +80,12 @@ export class MyBarn extends CGFobject {
         this.capMaterial.setTextureWrap('REPEAT', 'REPEAT');
 
         this.windowMaterial = new CGFappearance(scene);
-        this.windowMaterial.setAmbient(0.04, 0.06, 0.10, 1.0);
-        this.windowMaterial.setDiffuse(0.10, 0.14, 0.20, 1.0);
-        this.windowMaterial.setSpecular(0.55, 0.60, 0.65, 1.0);
-        this.windowMaterial.setShininess(70.0);
+        this.windowMaterial.setAmbient(0.35, 0.35, 0.35, 1.0);
+        this.windowMaterial.setDiffuse(1.0, 1.0, 1.0, 1.0);
+        this.windowMaterial.setSpecular(0.20, 0.22, 0.25, 1.0);
+        this.windowMaterial.setShininess(40.0);
+        this.windowTexture = new CGFtexture(scene, "textures/props/barn/window_pane.png");
+        this.windowMaterial.setTexture(this.windowTexture);
     }
 
     initBuffers() {
