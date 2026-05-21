@@ -52,22 +52,32 @@ export class MyBarn extends CGFobject {
         this.roofMaterial.setTextureWrap('REPEAT', 'REPEAT');
 
         this.stoneMaterial = new CGFappearance(scene);
-        this.stoneMaterial.setAmbient(0.35, 0.35, 0.35, 1.0);
-        this.stoneMaterial.setDiffuse(0.55, 0.55, 0.55, 1.0);
+        this.stoneMaterial.setAmbient(0.30, 0.30, 0.30, 1.0);
+        this.stoneMaterial.setDiffuse(0.95, 0.95, 0.95, 1.0);
         this.stoneMaterial.setSpecular(0.05, 0.05, 0.05, 1.0);
         this.stoneMaterial.setShininess(4.0);
+        this.stoneTexture = new CGFtexture(scene, "textures/props/barn/stone_foundation.png");
+        this.stoneMaterial.setTexture(this.stoneTexture);
+        this.stoneMaterial.setTextureWrap('REPEAT', 'REPEAT');
 
         this.siloMaterial = new CGFappearance(scene);
-        this.siloMaterial.setAmbient(0.40, 0.40, 0.42, 1.0);
-        this.siloMaterial.setDiffuse(0.72, 0.72, 0.75, 1.0);
-        this.siloMaterial.setSpecular(0.40, 0.40, 0.45, 1.0);
-        this.siloMaterial.setShininess(48.0);
+        this.siloMaterial.setAmbient(0.42, 0.42, 0.44, 1.0);
+        this.siloMaterial.setDiffuse(0.95, 0.95, 0.97, 1.0);
+        this.siloMaterial.setSpecular(0.12, 0.12, 0.14, 1.0);
+        this.siloMaterial.setShininess(12.0);
+        this.siloTexture = new CGFtexture(scene, "textures/props/barn/corrugated_iron.png");
+        this.siloMaterial.setTexture(this.siloTexture);
+        this.siloMaterial.setTextureWrap('REPEAT', 'REPEAT');
 
+        // silo caps reuse the main roof shingle texture so the roof line reads
+        // as a single material across the building and the silos
         this.capMaterial = new CGFappearance(scene);
-        this.capMaterial.setAmbient(0.22, 0.10, 0.08, 1.0);
-        this.capMaterial.setDiffuse(0.52, 0.18, 0.13, 1.0);
-        this.capMaterial.setSpecular(0.18, 0.10, 0.10, 1.0);
-        this.capMaterial.setShininess(10.0);
+        this.capMaterial.setAmbient(0.20, 0.20, 0.20, 1.0);
+        this.capMaterial.setDiffuse(1.0, 1.0, 1.0, 1.0);
+        this.capMaterial.setSpecular(0.10, 0.10, 0.10, 1.0);
+        this.capMaterial.setShininess(8.0);
+        this.capMaterial.setTexture(this.roofTexture);
+        this.capMaterial.setTextureWrap('REPEAT', 'REPEAT');
 
         this.windowMaterial = new CGFappearance(scene);
         this.windowMaterial.setAmbient(0.04, 0.06, 0.10, 1.0);
@@ -280,7 +290,8 @@ class MyBarnCylinder extends CGFobject {
             const t0 = i * 2 + 1;
             const b1 = (i + 1) * 2;
             const t1 = (i + 1) * 2 + 1;
-            this.indices.push(b0, b1, t1, b0, t1, t0);
+            // CCW from outside the cylinder so back-face culling hides the inside
+            this.indices.push(b0, t1, b1, b0, t0, t1);
         }
 
         this.primitiveType = this.scene.gl.TRIANGLES;
@@ -329,7 +340,8 @@ class MyBarnCone extends CGFobject {
             this.normals.push(nx, nyAxial, nz,  nx, nyAxial, nz,  nx, nyAxial, nz);
             this.texCoords.push(t0, 1, t1, 1, (t0 + t1) / 2, 0);
 
-            this.indices.push(idx, idx + 1, idx + 2);
+            // CCW from outside — apex first when viewed from outside
+            this.indices.push(idx, idx + 2, idx + 1);
         }
 
         this.primitiveType = this.scene.gl.TRIANGLES;
