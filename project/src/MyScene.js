@@ -212,9 +212,8 @@ export class MyScene extends CGFscene {
         }
 
         this.updateTerrainEnvironment();
-        this.gameplay.updateHUD();
 
-        // bounce back to menu the moment the wagon dies (HUD already shows the final HP=0 + score)
+        // return to menu the moment the wagon dies
         if (playing && this.gameplay.wagonHP <= 0) {
             this.gameplay.showMenu();
         }

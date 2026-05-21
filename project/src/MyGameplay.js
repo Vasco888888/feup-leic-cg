@@ -1,7 +1,7 @@
-// All gameplay-loop state and behavior: HP/score economy, the menu/HUD DOM,
-// bale spawning + pickup + delivery, and the per-second tick. Owned by MyScene
-// as `scene.gameplay` and reads/writes scene world objects (wagon, terrain,
-// barn, deliveryZone, camera) through the back-reference.
+// All gameplay-loop state and behavior: HP/score economy, the menu DOM, bale
+// spawning + pickup + delivery, and the per-second tick. Owned by MyScene as
+// `scene.gameplay` and reads/writes scene world objects (wagon, terrain, barn,
+// deliveryZone, camera) through the back-reference.
 export class MyGameplay {
     constructor(scene) {
         this.scene = scene;
@@ -44,7 +44,6 @@ export class MyGameplay {
         this.prevDropKey = false;
 
         this._menuEl = null;
-        this._hudElems = null;
     }
 
     init() {
@@ -133,21 +132,6 @@ export class MyGameplay {
 
         if (this._menuEl) this._menuEl.classList.add("hidden");
         this.gameState = 'playing';
-    }
-
-    updateHUD() {
-        // cache the DOM lookups once; readouts are pushed each frame so they
-        // mirror the dat.GUI controllers without an extra render layer
-        if (!this._hudElems) {
-            this._hudElems = {
-                hp: document.getElementById("hud-hp-value"),
-                score: document.getElementById("hud-score-value"),
-                bales: document.getElementById("hud-bales-value")
-            };
-        }
-        if (this._hudElems.hp) this._hudElems.hp.textContent = Math.round(this.wagonHP);
-        if (this._hudElems.score) this._hudElems.score.textContent = this.score;
-        if (this._hudElems.bales) this._hudElems.bales.textContent = this.balesDelivered;
     }
 
     applyImpactDamage() {

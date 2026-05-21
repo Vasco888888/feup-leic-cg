@@ -10,90 +10,7 @@ canvas {
     height: 100%;
 }
 
-/* HUD overlay — wooden-plank signage above the WebGL canvas; never eats input */
-#hud {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    pointer-events: none;
-    z-index: 10;
-    font-family: "Georgia", "Bookman Old Style", "Palatino Linotype", serif;
-    user-select: none;
-}
-
-#hud-tl {
-    position: absolute;
-    top: 20px;
-    left: 22px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-#hud-tc {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.hud-item {
-    display: flex;
-    align-items: baseline;
-    gap: 14px;
-    padding: 10px 22px;
-    color: #f6e6c2;
-    background:
-        repeating-linear-gradient(
-            90deg,
-            rgba(0, 0, 0, 0.18) 0,
-            rgba(0, 0, 0, 0.18) 1px,
-            transparent 1px,
-            transparent 28px
-        ),
-        linear-gradient(180deg, #5b3d22 0%, #3b2410 100%);
-    border: 2px solid #2a1a0a;
-    border-radius: 6px;
-    box-shadow:
-        inset 0 1px 0 rgba(255, 215, 150, 0.22),
-        inset 0 -3px 6px rgba(0, 0, 0, 0.55),
-        0 5px 10px rgba(0, 0, 0, 0.40);
-}
-
-.hud-label {
-    font-size: 11px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: #d4b07a;
-    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.65);
-    font-weight: 700;
-}
-
-.hud-value {
-    font-size: 24px;
-    font-weight: 700;
-    color: #faecca;
-    text-shadow: 1px 2px 0 rgba(0, 0, 0, 0.65);
-    font-variant-numeric: tabular-nums;
-    min-width: 1.8em;
-    text-align: right;
-}
-
-.hud-hp    { box-shadow:
-    inset 5px 0 0 #a3402c,
-    inset 0 1px 0 rgba(255, 215, 150, 0.22),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.55),
-    0 5px 10px rgba(0, 0, 0, 0.40); }
-.hud-bales { box-shadow:
-    inset 5px 0 0 #c98a2a,
-    inset 0 1px 0 rgba(255, 215, 150, 0.22),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.55),
-    0 5px 10px rgba(0, 0, 0, 0.40); }
-.hud-score { padding: 12px 28px; }
-.hud-score .hud-value { color: #f7d27a; font-size: 26px; }
-
-/* Main menu overlay — blurs the (frozen) game behind, sits above the HUD */
+/* Main menu overlay — blurs the (frozen) game behind */
 #menu {
     position: fixed;
     inset: 0;
@@ -122,42 +39,41 @@ canvas {
 #menu-play {
     margin-top: 5vh;
     font-family: inherit;
-    font-size: 26px;
+    font-size: 28px;
     font-weight: 700;
-    letter-spacing: 0.35em;
+    letter-spacing: 0.5em;
     text-transform: uppercase;
-    color: #faecca;
-    padding: 16px 64px;
-    border: 3px solid #2a1a0a;
-    border-radius: 8px;
-    background:
-        repeating-linear-gradient(
-            90deg,
-            rgba(0, 0, 0, 0.18) 0,
-            rgba(0, 0, 0, 0.18) 1px,
-            transparent 1px,
-            transparent 28px
-        ),
-        linear-gradient(180deg, #5b3d22 0%, #3b2410 100%);
+    color: #f4e0b3;
+    padding: 18px 88px 18px 96px;
+    border: 1px solid rgba(0, 0, 0, 0.65);
+    border-radius: 12px;
+    /* same dark oak the wagon uses for bed/seat/tongue */
+    background: url('textures/props/wagon/dark_oak.jpg') center / cover, #3b2410;
     box-shadow:
-        inset 5px 0 0 #c98a2a,
-        inset 0 1px 0 rgba(255, 215, 150, 0.22),
-        inset 0 -3px 6px rgba(0, 0, 0, 0.55),
-        0 6px 14px rgba(0, 0, 0, 0.45);
-    text-shadow: 1px 2px 0 rgba(0, 0, 0, 0.65);
+        inset 0 1px 0 rgba(255, 220, 170, 0.20),
+        inset 0 -2px 8px rgba(0, 0, 0, 0.55),
+        0 10px 28px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 2px 3px rgba(0, 0, 0, 0.7);
     cursor: pointer;
-    transition: transform 0.06s ease-out, filter 0.12s ease-out;
+    transition:
+        transform 0.12s ease-out,
+        box-shadow 0.18s ease-out,
+        filter 0.18s ease-out;
 }
 
 #menu-play:hover {
-    filter: brightness(1.12);
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 220, 170, 0.28),
+        inset 0 -2px 8px rgba(0, 0, 0, 0.55),
+        0 14px 36px rgba(0, 0, 0, 0.55);
 }
 
 #menu-play:active {
     transform: translateY(2px);
     box-shadow:
-        inset 5px 0 0 #c98a2a,
-        inset 0 1px 0 rgba(255, 215, 150, 0.22),
-        inset 0 -3px 6px rgba(0, 0, 0, 0.55),
-        0 2px 6px rgba(0, 0, 0, 0.45);
+        inset 0 1px 0 rgba(255, 220, 170, 0.14),
+        inset 0 -1px 4px rgba(0, 0, 0, 0.55),
+        0 3px 10px rgba(0, 0, 0, 0.45);
 }
