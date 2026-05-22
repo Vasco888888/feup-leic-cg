@@ -63,7 +63,7 @@ export class MyScene extends CGFscene {
         this.hayBaleArrow = new MyHayBaleArrow(this);
         this.barn = new MyBarn(this);
         this.barnPos = { x: -20, z: -20 };
-        this.terrain = new MyTerrain(this, 144, 3000, 12, 42);
+        this.terrain = new MyTerrain(this, 160, 3000, 16, 42);
         // sits just in front of the barn door (barn front face at world Z = barnPos.z + 5)
         this.deliveryZone = new MyDeliveryZone(this, this.barnPos.x, this.barnPos.z + 12, 5.5, this.terrain);
         this.rockSet = new MyRockSet(this, this.terrain, 95, 520, 123);

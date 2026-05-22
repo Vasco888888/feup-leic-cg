@@ -16,7 +16,7 @@ export class MyTerrain extends CGFobject {
         this.octaves = 5;
         this.persistence = 0.55;
         this.lacunarity = 2.4;
-        this.baseFrequency = 3.0; // controls how wide the hills are
+        this.baseFrequency = 6.5; // higher = more hills per world unit
 
         this.heightData = [];
 
@@ -74,14 +74,15 @@ export class MyTerrain extends CGFobject {
         // recenter around 0 so the noise yields both hills and valleys
         const centered = (h - 0.5) * 2.0;
 
-        // gently lift the border ring so deep valleys don't punch through the horizon
+        // raise the perimeter into a tall ring so the playable area can't see
+        // past the world edge into empty space
         const interiorHeight = centered * this.maxHeight * edgeFade;
-        const borderLift = (1.0 - edgeFade) * (this.maxHeight * 0.10);
+        const borderLift = (1.0 - edgeFade) * (this.maxHeight * 3.0);
         return interiorHeight + borderLift;
     }
 
     _edgeFade(u, v) {
-        const margin = 0.08;
+        const margin = 0.22;
         const fadeU = smoothstepJS(0, margin, u) * smoothstepJS(0, margin, 1 - u);
         const fadeV = smoothstepJS(0, margin, v) * smoothstepJS(0, margin, 1 - v);
         return fadeU * fadeV;
