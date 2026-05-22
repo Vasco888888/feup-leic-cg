@@ -1,6 +1,6 @@
 import { CGFappearance, CGFtexture } from "../../../lib/CGF.js";
 import { MyRock } from "./MyRock.js";
-import { onPath } from "../../src/MyTerrainPath.js";
+import { onPath } from "./MyTerrainPath.js";
 
 /**
  * Procedural rock scatter system; varies shape, scale, rotation and texture per instance.

@@ -1,6 +1,6 @@
 import { CGFappearance, CGFshader, CGFtexture } from "../../../lib/CGF.js";
 import { MyGrassPatch } from "./MyGrassPatch.js";
-import { onPath } from "../../src/MyTerrainPath.js";
+import { onPath } from "./MyTerrainPath.js";
 
 /**
  * Scatters dense green and dry wheat grass patches with a shared wind shader.

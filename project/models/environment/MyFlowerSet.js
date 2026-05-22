@@ -1,6 +1,6 @@
 import { CGFappearance, CGFtexture } from "../../../lib/CGF.js";
 import { MyFlower } from "./MyFlower.js";
-import { onPath } from "../../src/MyTerrainPath.js";
+import { onPath } from "./MyTerrainPath.js";
 
 /**
  * Procedural flower scatter system with randomised shapes, colours and placement.

@@ -1,4 +1,4 @@
-import { onPath } from "./MyTerrainPath.js";
+import { onPath } from "../models/environment/MyTerrainPath.js";
 
 // All gameplay-loop state and behavior: HP/score economy, the menu DOM, bale
 // spawning + pickup + delivery, and the per-second tick. Owned by MyScene as
