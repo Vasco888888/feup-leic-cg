@@ -10,6 +10,8 @@ uniform float uWindStrength;
 uniform vec3 uPatchPos;
 uniform float uRotY;
 uniform vec2 uScale;
+// (dh/dx, dh/dz) at the patch centre — tilts the patch onto local terrain
+uniform vec2 uTerrainSlope;
 
 varying vec2 vTextureCoord;
 varying float vHeight;
@@ -52,7 +54,11 @@ void main() {
 
 
     vTextureCoord = aTextureCoord;
-    vHeight = pos.y; 
+    vHeight = pos.y;
+
+    // shift the blade base to match the local ground: linear tangent-plane
+    // tilt around the patch centre, using slope at the centre
+    pos.y += localPos.x * uTerrainSlope.x + localPos.z * uTerrainSlope.y;
 
     gl_Position = uPMatrix * uMVMatrix * vec4(pos, 1.0);
 }

@@ -29,7 +29,8 @@ export class MyGrassSet {
             uSunInfluence: 1.0,
             uPatchPos: [0, 0, 0],
             uRotY: 0,
-            uScale: [1, 1]
+            uScale: [1, 1],
+            uTerrainSlope: [0, 0]
         });
 
         // shader supplies the colour, so no texture is bound
@@ -84,6 +85,14 @@ export class MyGrassSet {
             if (!isDead && zone > 0.45) continue;
 
             const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
+            // local terrain slope (dh/dx, dh/dz) — the vertex shader uses this
+            // to tilt the patch so blades follow rolling hills instead of floating
+            const eps = 0.5;
+            const slopeX = (this.terrain.getTerrainHeight(worldX + eps, worldZ) -
+                            this.terrain.getTerrainHeight(worldX - eps, worldZ)) / (2 * eps);
+            const slopeZ = (this.terrain.getTerrainHeight(worldX, worldZ + eps) -
+                            this.terrain.getTerrainHeight(worldX, worldZ - eps)) / (2 * eps);
+
             const patchIdx = Math.floor(this._seededRandom(idx * 3 + 2) * this.patchPool.length);
 
             // scaleZ = 1/scaleX preserves patch area while breaking the circular outline
@@ -93,6 +102,7 @@ export class MyGrassSet {
 
             placements.push({
                 x: worldX, y: worldY, z: worldZ,
+                slopeX, slopeZ,
                 patchIdx, rotY, scaleX, scaleZ
             });
         }
@@ -163,7 +173,8 @@ export class MyGrassSet {
             this.grassShader.setUniformsValues({
                 uPatchPos: [p.x, p.y, p.z],
                 uRotY: p.rotY,
-                uScale: [p.scaleX, p.scaleZ]
+                uScale: [p.scaleX, p.scaleZ],
+                uTerrainSlope: [p.slopeX, p.slopeZ]
             });
             this.patchPool[p.patchIdx].display();
             scene.popMatrix();
@@ -187,10 +198,11 @@ export class MyGrassSet {
             scene.translate(p.x, p.y, p.z);
             scene.rotate(p.rotY, 0, 1, 0);
             scene.scale(p.scaleX, 1.0, p.scaleZ);
-            this.grassShader.setUniformsValues({ 
+            this.grassShader.setUniformsValues({
                 uPatchPos: [p.x, p.y, p.z],
                 uRotY: p.rotY,
-                uScale: [p.scaleX, p.scaleZ]
+                uScale: [p.scaleX, p.scaleZ],
+                uTerrainSlope: [p.slopeX, p.slopeZ]
             });
             this.patchPool[p.patchIdx].display();
             scene.popMatrix();
