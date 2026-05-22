@@ -181,23 +181,12 @@ export class MyGameplay {
     applyDelivery() {
         const scene = this.scene;
         if (!scene.deliveryZone || !scene.wagon) return;
-        const inside = scene.deliveryZone.contains(scene.wagon.position[0], scene.wagon.position[2]);
-        // edge-detected: deliveries fire once per zone entry, not every frame inside
-        if (inside && !this.wagonInDeliveryZone) {
-            const carried = scene.wagon.carriedBales;
-            if (carried && carried.length > 0) {
-                const restored = carried.length * this.hpPerBaleDelivery;
-                this.wagonHP = Math.min(this.maxHP, this.wagonHP + restored);
-                this.balesDelivered += carried.length;
-                const deliveredSet = new Set(carried);
-                this.bales = this.bales.filter(b => !deliveredSet.has(b));
-                scene.wagon.carriedBales = [];
-                // surface the heal on the instantaneous-heal bar
-                this.lastHealing = restored;
-                this._healingPeak = Math.max(this._healingPeak, restored);
-            }
-        }
-        this.wagonInDeliveryZone = inside;
+        // delivery itself fires from the L key in handleHayBaleKeys; this just
+        // tracks containment so the zone ring can switch colour
+        this.wagonInDeliveryZone = scene.deliveryZone.contains(
+            scene.wagon.position[0],
+            scene.wagon.position[2]
+        );
     }
 
     handleHayBaleKeys() {
@@ -226,11 +215,20 @@ export class MyGameplay {
             if (best) scene.wagon.pickup(best);
         }
 
-        // drop the most recently picked-up bale at the rear of the wagon
+        // L releases one bale per press: delivered to the barn if the wagon is
+        // standing in the delivery zone, otherwise dropped at the rear
         if (dropKey && !this.prevDropKey && scene.wagon.carriedBales.length > 0) {
-            const dropPos = scene.wagon.dropPosition();
             const released = scene.wagon.releaseBale();
-            if (released) {
+            if (this.wagonInDeliveryZone) {
+                const restored = this.hpPerBaleDelivery;
+                this.wagonHP = Math.min(this.maxHP, this.wagonHP + restored);
+                this.balesDelivered += 1;
+                this.bales = this.bales.filter(b => b !== released);
+                // surface the heal on the instantaneous-heal bar
+                this.lastHealing = restored;
+                this._healingPeak = Math.max(this._healingPeak, restored);
+            } else {
+                const dropPos = scene.wagon.dropPosition();
                 released.pos[0] = dropPos[0];
                 released.pos[1] = 0;
                 released.pos[2] = dropPos[2];

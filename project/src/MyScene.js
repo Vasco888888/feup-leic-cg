@@ -205,9 +205,9 @@ export class MyScene extends CGFscene {
                 this.wagon.position[2]
             );
             this.wagon.applyTerrainTilt(this.terrain, dt);
-            this.gameplay.handleHayBaleKeys();
-            this.gameplay.applyImpactDamage();
             this.gameplay.applyDelivery();
+            this.gameplay.applyImpactDamage();
+            this.gameplay.handleHayBaleKeys();
             if (this.chaseCamera.follow) this.chaseCamera.update(dt);
         }
 
