@@ -199,11 +199,7 @@ export class MyScene extends CGFscene {
 
         if (playing && this.wagon && dt > 0) {
             this.wagon.update(dt, this.getColliders());
-            // wheels need to ride on the terrain, not the abstract plane at Y=0
-            this.wagon.position[1] = this.terrain.getTerrainHeight(
-                this.wagon.position[0],
-                this.wagon.position[2]
-            );
+            // applyTerrainTilt sets position[1] from the four wheel ground samples
             this.wagon.applyTerrainTilt(this.terrain, dt);
             this.gameplay.applyDelivery();
             this.gameplay.applyImpactDamage();

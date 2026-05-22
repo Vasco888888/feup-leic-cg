@@ -199,38 +199,58 @@ export class MyWagon extends CGFobject {
         this.rearSpin += dist / REAR_WHEEL_RADIUS_WORLD;
     }
 
-    // sample terrain height at each wheel and lean the body to match the slope
+    // sample terrain at each wheel; set body Y to the wheel-average ground
+    // height and lean pitch/roll to match the slope, so wheels stay planted
+    // even when the terrain dips under the wagon centre
     applyTerrainTilt(terrain, dt) {
         const cosH = Math.cos(this.heading);
         const sinH = Math.sin(this.heading);
 
-        // wheelbase/track in world units; mirrors the wheel offsets above
         const halfWheelbase = FRONT_WHEEL_OFFSET_X * WAGON_SCALE;
         const halfTrack     = WHEEL_OFFSET_Z * WAGON_SCALE;
 
-        const fx = this.position[0] + halfWheelbase * cosH;
-        const fz = this.position[2] - halfWheelbase * sinH;
-        const rx = this.position[0] - halfWheelbase * cosH;
-        const rz = this.position[2] + halfWheelbase * sinH;
+        // sample the four actual wheel ground positions
+        const flX = this.position[0] + halfWheelbase * cosH - halfTrack * sinH;
+        const flZ = this.position[2] - halfWheelbase * sinH - halfTrack * cosH;
+        const frX = this.position[0] + halfWheelbase * cosH + halfTrack * sinH;
+        const frZ = this.position[2] - halfWheelbase * sinH + halfTrack * cosH;
+        const rlX = this.position[0] - halfWheelbase * cosH - halfTrack * sinH;
+        const rlZ = this.position[2] + halfWheelbase * sinH - halfTrack * cosH;
+        const rrX = this.position[0] - halfWheelbase * cosH + halfTrack * sinH;
+        const rrZ = this.position[2] + halfWheelbase * sinH + halfTrack * cosH;
 
-        const leftX  = this.position[0] - halfTrack * sinH;
-        const leftZ  = this.position[2] - halfTrack * cosH;
-        const rightX = this.position[0] + halfTrack * sinH;
-        const rightZ = this.position[2] + halfTrack * cosH;
+        const hFL = terrain.getTerrainHeight(flX, flZ);
+        const hFR = terrain.getTerrainHeight(frX, frZ);
+        const hRL = terrain.getTerrainHeight(rlX, rlZ);
+        const hRR = terrain.getTerrainHeight(rrX, rrZ);
 
-        const hf = terrain.getTerrainHeight(fx, fz);
-        const hr = terrain.getTerrainHeight(rx, rz);
-        const hl = terrain.getTerrainHeight(leftX, leftZ);
-        const hri = terrain.getTerrainHeight(rightX, rightZ);
+        // pitch from front-vs-rear average; roll from left-vs-right average
+        const frontAvg = (hFL + hFR) * 0.5;
+        const rearAvg  = (hRL + hRR) * 0.5;
+        const leftAvg  = (hFL + hRL) * 0.5;
+        const rightAvg = (hFR + hRR) * 0.5;
 
-        const targetPitch = Math.atan2(hf - hr, halfWheelbase * 2.0);
+        const targetPitch = Math.atan2(frontAvg - rearAvg, halfWheelbase * 2.0);
         // right-side-higher rolls the body LEFT (away from the rise), so flip sign
-        const targetRoll  = Math.atan2(hl - hri, halfTrack * 2.0);
+        const targetRoll  = Math.atan2(leftAvg - rightAvg, halfTrack * 2.0);
 
         // smooth so quick bumps don't make the body shake
         const k = 1.0 - Math.exp(-dt / 0.12);
         this.pitch += (targetPitch - this.pitch) * k;
         this.roll  += (targetRoll  - this.roll)  * k;
+
+        // body Y: each wheel imposes a minimum body height to stay above its
+        // ground (= ground - wheel's vertical offset from body Y under the
+        // current pitch/roll). Taking the max keeps every wheel out of the
+        // terrain even while pitch/roll are still smoothing toward target.
+        // When pitch/roll match the slope, all four bounds equal the average.
+        const pitchOff = halfWheelbase * this.pitch;
+        const rollOff  = halfTrack * this.roll;
+        const yFL = hFL - ( pitchOff + rollOff);
+        const yFR = hFR - ( pitchOff - rollOff);
+        const yRL = hRL - (-pitchOff + rollOff);
+        const yRR = hRR - (-pitchOff - rollOff);
+        this.position[1] = Math.max(yFL, yFR, yRL, yRR);
     }
 
     pickup(baleEntry) {
