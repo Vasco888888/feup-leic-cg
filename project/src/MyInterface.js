@@ -38,7 +38,8 @@ export class MyInterface extends CGFinterface {
                 f.add(gameplay, 'lastDamage', 0, 15).name('Instant damage').listen(),
                 f.add(gameplay, 'lastHealing', 0, gameplay.maxHP).name('Instant heal').listen(),
                 f.add(gameplay, 'balesDelivered', 0, 50).name('Bales delivered').listen(),
-                f.add(gameplay, 'score', 0, 9999).name('Score (s)').listen()
+                f.add(gameplay, 'score', 0, 9999).name('Score (s)').listen(),
+                f.add(gameplay, 'bestScore', 0, 9999).name('Best (s)').listen()
             ];
             // disable pointer events so the player can't drag the sliders
             for (const c of controllers) {

@@ -20,6 +20,8 @@ export class MyGameplay {
         // score = whole seconds the wagon has stayed alive; freezes at HP 0.
         // HP decay and score share one tick so the two readouts move in lockstep.
         this.score = 0;
+        // best score persisted across runs via localStorage; never reset by startGame
+        this.bestScore = this._loadBestScore();
         this._tickAccum = 0;
 
         // delivery zone — circular drop spot in front of the barn. Bales carried
@@ -84,7 +86,28 @@ export class MyGameplay {
             if (this.wagonHP > 0) {
                 this.wagonHP = Math.max(0, this.wagonHP - this.hpDecayPerSec);
                 this.score += 1;
+                if (this.score > this.bestScore) {
+                    this.bestScore = this.score;
+                    this._saveBestScore();
+                }
             }
+        }
+    }
+
+    _loadBestScore() {
+        try {
+            const v = parseInt(localStorage.getItem('cg.bestScore'), 10);
+            return Number.isFinite(v) && v > 0 ? v : 0;
+        } catch (e) {
+            return 0;
+        }
+    }
+
+    _saveBestScore() {
+        try {
+            localStorage.setItem('cg.bestScore', String(this.bestScore));
+        } catch (e) {
+            // localStorage unavailable (private mode etc.) — drop silently
         }
     }
 
