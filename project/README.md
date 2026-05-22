@@ -108,3 +108,51 @@ Not credited under the spec ("*No credit will be given for developments beyond w
 - Mountain panorama layered behind the sky horizon.
 - Chase camera with mouse-driven pitch/shoulder pan and cinematic title-screen framing.
 - Best-score persistence via `localStorage`.
+
+### Performance
+
+- **Per-element distance culling** against the camera: grass at 95u (with a forward-cone tolerance so peripheral patches still appear), flowers at 80u, rocks at 160u, hay bales at 160u. Patches behind the camera are skipped via a dot-product check.
+- **Shared geometry pools**: 6 grass-patch meshes reused across every placement, 6 rock shapes across the 200 rocks, 8 flower shapes across the meadow.
+- **Batched arrow rendering**: the pinpointing-arrow shader is bound once per frame and every visible arrow draws as an instance — no per-bale shader switch.
+- **Pre-baked terrain heights** (`MyTerrain.heightData`): every per-frame lookup (wagon wheels, grass slope, bale grounding) is an O(1) sample instead of recomputing FBM noise.
+- **Framerate-independent simulation**: HP and score advance from a `dt`-accumulated tick (one logical step per real-time second), not per-frame.
+- **GPU-driven animation**: wind sway, arrow spin/bob, cloud drift, and day/night blending all live in shaders; the CPU just updates `uTime`.
+
+---
+
+## Known issues / limitations
+
+- Bales remain visible at long camera distance (~160 world units). The spec describes bales as "only visible when near them, but an arrow pinpoints them"; the arrow does its job, but the bale cull radius is wider than a strict reading of the spec.
+- Grass patches use a tangent-plane tilt at the patch centre. It works well on smooth slopes but cannot follow sub-patch curvature on very bumpy spots.
+
+---
+
+## Screenshots
+
+| #     | Preview                                                                                            | Description                          |
+| ----- | -------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **1** | <img src="images/screenshots/project-t04g06-1.png" width="320" alt="Scene overview"/>              | Overall scene overview (wide angle)  |
+| **2** | <img src="images/screenshots/project-t04g06-2.png" width="320" alt="Floor detail"/>                | Flowers, rocks, and floor detail     |
+| **3** | <img src="images/screenshots/project-t04g06-3.png" width="320" alt="Wagon close-up"/>              | Wagon close-up (model and textures)  |
+| **4** | <img src="images/screenshots/project-t04g06-4.gif" width="320" alt="Shader animation"/>            | Shader animation (animated GIF)      |
+| **5** | <img src="images/screenshots/project-t04g06-5.png" width="320" alt="Night with wagon lamps"/>      | Night scene with wagon lamps lit     |
+
+---
+
+## AI use declaration
+
+AI assistants were used as collaborative tools throughout the project. All integration, tuning, and design decisions were made by the group.
+
+- **Gemini 3.1 Pro** — image-generation source for seamless, high-quality textures in the project, the project logo, and the favicon.
+- **Claude Opus 4.7** — consulted as a coding assistant on:
+  - Code architecture discussions (splitting `MyScene` into `MyGameplay` / `MyLighting` / `MyChaseCamera`; extracting `MyTerrainPath` as the shared path-geometry module).
+  - Repository refactoring and organisation (folder grouping under `models/props/`, `models/environment/`, `models/external/`; moving system classes into `src/`).
+  - Shader math (grass tangent-plane tilt derivation; per-wheel ground-bound formula for the wagon body).
+  - Gameplay logic (HP/score tick, hay-bale pickup/delivery, best-score persistence, rock collider geometry).
+  - Bug diagnosis (grass patches floating on hills, wheels clipping the terrain, dat.GUI panel not initialising).
+  - Spec compliance review — cross-checking the project specification against the implementation to identify gaps and prioritise work.
+  - Code review — comment-style consistency, naming conventions, dead-code identification.
+  - Git workflow planning — branching strategy, milestone tag placement, merge sequencing.
+  - Performance analysis — sanity-checking culling distances and reasoning about shared-geometry pool sizes.
+  - Math sanity checks — small-angle approximations in the wagon kinematics, sign conventions for pitch/roll.
+  - Documentation — this README, plus inline commit messages.
