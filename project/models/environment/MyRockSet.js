@@ -1,5 +1,6 @@
 import { CGFappearance, CGFtexture } from "../../../lib/CGF.js";
 import { MyRock } from "./MyRock.js";
+import { onPath } from "../../src/MyTerrainPath.js";
 
 /**
  * Procedural rock scatter system; varies shape, scale, rotation and texture per instance.
@@ -56,12 +57,7 @@ export class MyRockSet {
             const worldZ = Math.sin(angle) * dist;
 
             // keep rocks off the dirt roads (mirrors terrain.frag's pathMask)
-            const c1 = 85.0 * Math.sin(worldZ * 0.0042 + 3.9)
-                     + 28.0 * Math.sin(worldZ * 0.013 + 5.4);
-            const c2 = -40.0 + 55.0 * Math.sin(worldX * 0.0048 + 4.7)
-                            + 22.0 * Math.sin(worldX * 0.011 + 1.3);
-            if (Math.abs(worldX - c1) < 8) continue;
-            if (Math.abs(worldZ - c2) < 8) continue;
+            if (onPath(worldX, worldZ, 8)) continue;
 
             const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
 

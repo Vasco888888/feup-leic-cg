@@ -1,3 +1,5 @@
+import { onPath } from "./MyTerrainPath.js";
+
 // All gameplay-loop state and behavior: HP/score economy, the menu DOM, bale
 // spawning + pickup + delivery, and the per-second tick. Owned by MyScene as
 // `scene.gameplay` and reads/writes scene world objects (wagon, terrain, barn,
@@ -262,12 +264,7 @@ export class MyGameplay {
             const z = Math.sin(angle) * dist;
 
             // keep bales off the dirt roads (world-unit path math)
-            const c1 = 85.0 * Math.sin(z * 0.0042 + 3.9)
-                     + 28.0 * Math.sin(z * 0.013 + 5.4);
-            const c2 = -40.0 + 55.0 * Math.sin(x * 0.0048 + 4.7)
-                            + 22.0 * Math.sin(x * 0.011 + 1.3);
-            if (Math.abs(x - c1) < 9) continue;
-            if (Math.abs(z - c2) < 9) continue;
+            if (onPath(x, z, 9)) continue;
 
             // keep clear of the barn and the wagon spawn
             const dxBarn = x - barnPos.x;

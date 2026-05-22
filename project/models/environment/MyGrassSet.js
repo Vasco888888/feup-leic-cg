@@ -1,5 +1,6 @@
 import { CGFappearance, CGFshader, CGFtexture } from "../../../lib/CGF.js";
 import { MyGrassPatch } from "./MyGrassPatch.js";
+import { onPath } from "../../src/MyTerrainPath.js";
 
 /**
  * Scatters dense green and dry wheat grass patches with a shared wind shader.
@@ -74,23 +75,8 @@ export class MyGrassSet {
             const worldX = Math.cos(angle) * dist;
             const worldZ = Math.sin(angle) * dist;
 
-            // mirror the dirt path mask from terrain.frag (world-unit math)
-            const c1 = 85.0 * Math.sin(worldZ * 0.0042 + 3.9)
-                     + 28.0 * Math.sin(worldZ * 0.013 + 5.4);
-            const d1 = Math.abs(worldX - c1);
-
-            const c2 = -40.0 + 55.0 * Math.sin(worldX * 0.0048 + 4.7)
-                            + 22.0 * Math.sin(worldX * 0.011 + 1.3);
-            const d2 = Math.abs(worldZ - c2);
-
-            const c3 = 220.0 + 50.0 * Math.sin(worldZ * 0.0065 + 3.7);
-            let spurGate = 0.0;
-            if (worldZ > 60)  spurGate = Math.min(1.0, (worldZ - 60) / 160);
-            if (worldZ > 540) spurGate *= Math.max(0.0, 1.0 - (worldZ - 540) / 220);
-            const d3 = spurGate > 0.0 ? Math.abs(worldX - c3) : 1e6;
-
-            const pathHalfWidth = 7.5;
-            if (Math.min(d1, Math.min(d2, d3)) < pathHalfWidth) continue;
+            // mirror the dirt path mask from terrain.frag
+            if (onPath(worldX, worldZ, 7.5)) continue;
 
             // split the field into green/wheat zones with a thin buffer between them
             const zone = Math.sin(worldX * 0.03) * Math.cos(worldZ * 0.03);
