@@ -90,16 +90,40 @@ export class MyRockSet {
         const colliders = [];
         for (let i = 0; i < this.placements.length; i++) {
             const r = this.placements[i];
-            const radius = Math.max(r.scaleX, r.scaleZ) * 0.7;
-            if (radius > 0.3) {
-                colliders.push({
-                    x: r.x,
-                    z: r.z,
-                    radius,
-                    id: `rock-${i}`,
-                    damageOnHit: true,
-                });
+            const sx = r.scaleX;
+            const sz = r.scaleZ;
+            const longAxis  = Math.max(sx, sz);
+            const shortAxis = Math.min(sx, sz);
+            const id = `rock-${i}`;
+
+            // round-ish rocks: single circle from the average extent (catches
+            // a bit more of the visible footprint than max-based did, without
+            // becoming magnetic).
+            if (longAxis / shortAxis < 1.2) {
+                const radius = (sx + sz) * 0.5 * 0.75;
+                if (radius > 0.3) {
+                    colliders.push({ x: r.x, z: r.z, radius, id, damageOnHit: true });
+                }
+                continue;
             }
+
+            // elongated rocks: two circles spaced along the long axis so the
+            // collider follows the visible outline. shared id keeps a sweep
+            // through one rock counted as a single damage event.
+            const radius = shortAxis * 0.8;
+            if (radius <= 0.3) continue;
+            const offset = (longAxis - shortAxis) * 0.85;
+
+            // local long axis (+X if sx >= sz, else +Z) rotated into world XZ
+            const cosR = Math.cos(r.rotY);
+            const sinR = Math.sin(r.rotY);
+            const lx = (sx >= sz) ?  cosR : sinR;
+            const lz = (sx >= sz) ? -sinR : cosR;
+            const dx = lx * offset;
+            const dz = lz * offset;
+
+            colliders.push({ x: r.x - dx, z: r.z - dz, radius, id, damageOnHit: true });
+            colliders.push({ x: r.x + dx, z: r.z + dz, radius, id, damageOnHit: true });
         }
         return colliders;
     }
