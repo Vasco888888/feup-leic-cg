@@ -62,25 +62,41 @@ float fbm(vec2 p) {
     return value;
 }
 
-// wagon path mask: union of winding roads measured in world units so the width
-// stays fixed even if the terrain disc scales up
+// Winding spine x = spineX(z), pinned to the barn at z = -20.
+float spineX(float z) {
+    float t = z - (-20.0);
+    return -20.0 + 70.0 * sin(t * 0.0055)
+                 + 25.0 * sin(t * 0.013 + 3.14159);
+}
+
+float distToSegment(vec2 p, vec2 a, vec2 b) {
+    vec2 ab = b - a;
+    vec2 ap = p - a;
+    float t = clamp(dot(ap, ab) / dot(ab, ab), 0.0, 1.0);
+    return length(p - (a + t * ab));
+}
+
+// Road network: spine running north from the barn plus three spurs branching
+// off it. World-unit widths so the road thickness is independent of disc size.
 float pathMask(vec2 worldXZ) {
-    // main winding north-south road
-    float c1 = 85.0 * sin(worldXZ.y * 0.0042 + 3.9)
-             + 28.0 * sin(worldXZ.y * 0.013 + 5.4);
-    float d1 = abs(worldXZ.x - c1);
+    // spine — only valid north of the barn
+    float spineGate = smoothstep(-25.0, -15.0, worldXZ.y);
+    float d1 = mix(1e6, abs(worldXZ.x - spineX(worldXZ.y)), spineGate);
 
-    // east-west crossroad weaving across the field
-    float c2 = -40.0 + 55.0 * sin(worldXZ.x * 0.0048 + 4.7)
-                    + 22.0 * sin(worldXZ.x * 0.011 + 1.3);
-    float d2 = abs(worldXZ.y - c2);
+    // spurs anchored on the spine
+    vec2 spurA_a = vec2(spineX( 80.0),  80.0);
+    vec2 spurA_b = vec2( 220.0,  50.0);
+    float d2 = distToSegment(worldXZ, spurA_a, spurA_b);
 
-    // shorter spur curling off the main road in the upper half of the map
-    float c3 = 220.0 + 50.0 * sin(worldXZ.y * 0.0065 + 3.7);
-    float spurGate = smoothstep(60.0, 220.0, worldXZ.y) * (1.0 - smoothstep(540.0, 760.0, worldXZ.y));
-    float d3 = mix(1e6, abs(worldXZ.x - c3), spurGate);
+    vec2 spurB_a = vec2(spineX(200.0), 200.0);
+    vec2 spurB_b = vec2(-180.0, 250.0);
+    float d3 = distToSegment(worldXZ, spurB_a, spurB_b);
 
-    float dist = min(min(d1, d2), d3);
+    vec2 spurC_a = vec2(spineX(400.0), 400.0);
+    vec2 spurC_b = vec2( 200.0, 450.0);
+    float d4 = distToSegment(worldXZ, spurC_a, spurC_b);
+
+    float dist = min(min(d1, d2), min(d3, d4));
 
     float pathWidth = 5.0;
     float pathEdge  = 2.5;

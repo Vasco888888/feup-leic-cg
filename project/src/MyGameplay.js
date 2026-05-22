@@ -1,3 +1,5 @@
+import { onPath } from "../models/environment/MyTerrainPath.js";
+
 // All gameplay-loop state and behavior: HP/score economy, the menu DOM, bale
 // spawning + pickup + delivery, and the per-second tick. Owned by MyScene as
 // `scene.gameplay` and reads/writes scene world objects (wagon, terrain, barn,
@@ -47,7 +49,7 @@ export class MyGameplay {
     }
 
     init() {
-        this.bales = this._generateBales(22, 2024);
+        this.bales = this._generateBales(90, 2024);
 
         // park the wagon next to the barn so the title screen frames the wagon
         // with the barn behind it
@@ -111,7 +113,7 @@ export class MyGameplay {
         this._damagePeak = 0;
         this._healingPeak = 0;
 
-        this.bales = this._generateBales(22, 2024);
+        this.bales = this._generateBales(90, 2024);
 
         // spawn in front of the barn facing the delivery zone — matches the
         // title-screen framing so Play continues directly from the menu pose
@@ -181,23 +183,12 @@ export class MyGameplay {
     applyDelivery() {
         const scene = this.scene;
         if (!scene.deliveryZone || !scene.wagon) return;
-        const inside = scene.deliveryZone.contains(scene.wagon.position[0], scene.wagon.position[2]);
-        // edge-detected: deliveries fire once per zone entry, not every frame inside
-        if (inside && !this.wagonInDeliveryZone) {
-            const carried = scene.wagon.carriedBales;
-            if (carried && carried.length > 0) {
-                const restored = carried.length * this.hpPerBaleDelivery;
-                this.wagonHP = Math.min(this.maxHP, this.wagonHP + restored);
-                this.balesDelivered += carried.length;
-                const deliveredSet = new Set(carried);
-                this.bales = this.bales.filter(b => !deliveredSet.has(b));
-                scene.wagon.carriedBales = [];
-                // surface the heal on the instantaneous-heal bar
-                this.lastHealing = restored;
-                this._healingPeak = Math.max(this._healingPeak, restored);
-            }
-        }
-        this.wagonInDeliveryZone = inside;
+        // delivery itself fires from the L key in handleHayBaleKeys; this just
+        // tracks containment so the zone ring can switch colour
+        this.wagonInDeliveryZone = scene.deliveryZone.contains(
+            scene.wagon.position[0],
+            scene.wagon.position[2]
+        );
     }
 
     handleHayBaleKeys() {
@@ -226,11 +217,20 @@ export class MyGameplay {
             if (best) scene.wagon.pickup(best);
         }
 
-        // drop the most recently picked-up bale at the rear of the wagon
+        // L releases one bale per press: delivered to the barn if the wagon is
+        // standing in the delivery zone, otherwise dropped at the rear
         if (dropKey && !this.prevDropKey && scene.wagon.carriedBales.length > 0) {
-            const dropPos = scene.wagon.dropPosition();
             const released = scene.wagon.releaseBale();
-            if (released) {
+            if (this.wagonInDeliveryZone) {
+                const restored = this.hpPerBaleDelivery;
+                this.wagonHP = Math.min(this.maxHP, this.wagonHP + restored);
+                this.balesDelivered += 1;
+                this.bales = this.bales.filter(b => b !== released);
+                // surface the heal on the instantaneous-heal bar
+                this.lastHealing = restored;
+                this._healingPeak = Math.max(this._healingPeak, restored);
+            } else {
+                const dropPos = scene.wagon.dropPosition();
                 released.pos[0] = dropPos[0];
                 released.pos[1] = 0;
                 released.pos[2] = dropPos[2];
@@ -244,8 +244,8 @@ export class MyGameplay {
     _generateBales(count, seed) {
         const bales = [];
         const TWO_PI = Math.PI * 2;
-        const maxDist = 460;
-        const minDist = 18;
+        const maxDist = 490;
+        const minDist = 12;
 
         const hash = (n) => {
             let h = ((n + seed * 919) * 374761393) | 0;
@@ -264,12 +264,7 @@ export class MyGameplay {
             const z = Math.sin(angle) * dist;
 
             // keep bales off the dirt roads (world-unit path math)
-            const c1 = 85.0 * Math.sin(z * 0.0042 + 3.9)
-                     + 28.0 * Math.sin(z * 0.013 + 5.4);
-            const c2 = -40.0 + 55.0 * Math.sin(x * 0.0048 + 4.7)
-                            + 22.0 * Math.sin(x * 0.011 + 1.3);
-            if (Math.abs(x - c1) < 9) continue;
-            if (Math.abs(z - c2) < 9) continue;
+            if (onPath(x, z, 9)) continue;
 
             // keep clear of the barn and the wagon spawn
             const dxBarn = x - barnPos.x;

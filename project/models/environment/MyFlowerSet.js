@@ -1,5 +1,6 @@
 import { CGFappearance, CGFtexture } from "../../../lib/CGF.js";
 import { MyFlower } from "./MyFlower.js";
+import { onPath } from "./MyTerrainPath.js";
 
 /**
  * Procedural flower scatter system with randomised shapes, colours and placement.
@@ -110,12 +111,7 @@ export class MyFlowerSet {
             const flowerRadius = scale * 0.5;
 
             // keep flowers off the dirt roads
-            const c1 = 85.0 * Math.sin(worldZ * 0.0042 + 3.9)
-                     + 28.0 * Math.sin(worldZ * 0.013 + 5.4);
-            const c2 = -40.0 + 55.0 * Math.sin(worldX * 0.0048 + 4.7)
-                            + 22.0 * Math.sin(worldX * 0.011 + 1.3);
-            if (Math.abs(worldX - c1) < 8) continue;
-            if (Math.abs(worldZ - c2) < 8) continue;
+            if (onPath(worldX, worldZ, 8)) continue;
 
             if (this._collidesWithObstacles(worldX, worldZ, flowerRadius, obstacles)) continue;
 

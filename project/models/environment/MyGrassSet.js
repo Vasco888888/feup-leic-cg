@@ -1,5 +1,6 @@
 import { CGFappearance, CGFshader, CGFtexture } from "../../../lib/CGF.js";
 import { MyGrassPatch } from "./MyGrassPatch.js";
+import { onPath } from "./MyTerrainPath.js";
 
 /**
  * Scatters dense green and dry wheat grass patches with a shared wind shader.
@@ -28,7 +29,8 @@ export class MyGrassSet {
             uSunInfluence: 1.0,
             uPatchPos: [0, 0, 0],
             uRotY: 0,
-            uScale: [1, 1]
+            uScale: [1, 1],
+            uTerrainSlope: [0, 0]
         });
 
         // shader supplies the colour, so no texture is bound
@@ -74,23 +76,8 @@ export class MyGrassSet {
             const worldX = Math.cos(angle) * dist;
             const worldZ = Math.sin(angle) * dist;
 
-            // mirror the dirt path mask from terrain.frag (world-unit math)
-            const c1 = 85.0 * Math.sin(worldZ * 0.0042 + 3.9)
-                     + 28.0 * Math.sin(worldZ * 0.013 + 5.4);
-            const d1 = Math.abs(worldX - c1);
-
-            const c2 = -40.0 + 55.0 * Math.sin(worldX * 0.0048 + 4.7)
-                            + 22.0 * Math.sin(worldX * 0.011 + 1.3);
-            const d2 = Math.abs(worldZ - c2);
-
-            const c3 = 220.0 + 50.0 * Math.sin(worldZ * 0.0065 + 3.7);
-            let spurGate = 0.0;
-            if (worldZ > 60)  spurGate = Math.min(1.0, (worldZ - 60) / 160);
-            if (worldZ > 540) spurGate *= Math.max(0.0, 1.0 - (worldZ - 540) / 220);
-            const d3 = spurGate > 0.0 ? Math.abs(worldX - c3) : 1e6;
-
-            const pathHalfWidth = 7.5;
-            if (Math.min(d1, Math.min(d2, d3)) < pathHalfWidth) continue;
+            // mirror the dirt path mask from terrain.frag
+            if (onPath(worldX, worldZ, 7.5)) continue;
 
             // split the field into green/wheat zones with a thin buffer between them
             const zone = Math.sin(worldX * 0.03) * Math.cos(worldZ * 0.03);
@@ -98,6 +85,14 @@ export class MyGrassSet {
             if (!isDead && zone > 0.45) continue;
 
             const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
+            // local terrain slope (dh/dx, dh/dz) — the vertex shader uses this
+            // to tilt the patch so blades follow rolling hills instead of floating
+            const eps = 0.5;
+            const slopeX = (this.terrain.getTerrainHeight(worldX + eps, worldZ) -
+                            this.terrain.getTerrainHeight(worldX - eps, worldZ)) / (2 * eps);
+            const slopeZ = (this.terrain.getTerrainHeight(worldX, worldZ + eps) -
+                            this.terrain.getTerrainHeight(worldX, worldZ - eps)) / (2 * eps);
+
             const patchIdx = Math.floor(this._seededRandom(idx * 3 + 2) * this.patchPool.length);
 
             // scaleZ = 1/scaleX preserves patch area while breaking the circular outline
@@ -107,6 +102,7 @@ export class MyGrassSet {
 
             placements.push({
                 x: worldX, y: worldY, z: worldZ,
+                slopeX, slopeZ,
                 patchIdx, rotY, scaleX, scaleZ
             });
         }
@@ -177,7 +173,8 @@ export class MyGrassSet {
             this.grassShader.setUniformsValues({
                 uPatchPos: [p.x, p.y, p.z],
                 uRotY: p.rotY,
-                uScale: [p.scaleX, p.scaleZ]
+                uScale: [p.scaleX, p.scaleZ],
+                uTerrainSlope: [p.slopeX, p.slopeZ]
             });
             this.patchPool[p.patchIdx].display();
             scene.popMatrix();
@@ -201,10 +198,11 @@ export class MyGrassSet {
             scene.translate(p.x, p.y, p.z);
             scene.rotate(p.rotY, 0, 1, 0);
             scene.scale(p.scaleX, 1.0, p.scaleZ);
-            this.grassShader.setUniformsValues({ 
+            this.grassShader.setUniformsValues({
                 uPatchPos: [p.x, p.y, p.z],
                 uRotY: p.rotY,
-                uScale: [p.scaleX, p.scaleZ]
+                uScale: [p.scaleX, p.scaleZ],
+                uTerrainSlope: [p.slopeX, p.slopeZ]
             });
             this.patchPool[p.patchIdx].display();
             scene.popMatrix();

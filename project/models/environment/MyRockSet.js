@@ -1,5 +1,6 @@
 import { CGFappearance, CGFtexture } from "../../../lib/CGF.js";
 import { MyRock } from "./MyRock.js";
+import { onPath } from "./MyTerrainPath.js";
 
 /**
  * Procedural rock scatter system; varies shape, scale, rotation and texture per instance.
@@ -56,12 +57,7 @@ export class MyRockSet {
             const worldZ = Math.sin(angle) * dist;
 
             // keep rocks off the dirt roads (mirrors terrain.frag's pathMask)
-            const c1 = 85.0 * Math.sin(worldZ * 0.0042 + 3.9)
-                     + 28.0 * Math.sin(worldZ * 0.013 + 5.4);
-            const c2 = -40.0 + 55.0 * Math.sin(worldX * 0.0048 + 4.7)
-                            + 22.0 * Math.sin(worldX * 0.011 + 1.3);
-            if (Math.abs(worldX - c1) < 8) continue;
-            if (Math.abs(worldZ - c2) < 8) continue;
+            if (onPath(worldX, worldZ, 8)) continue;
 
             const worldY = this.terrain.getTerrainHeight(worldX, worldZ);
 
@@ -94,16 +90,40 @@ export class MyRockSet {
         const colliders = [];
         for (let i = 0; i < this.placements.length; i++) {
             const r = this.placements[i];
-            const radius = Math.max(r.scaleX, r.scaleZ) * 0.7;
-            if (radius > 0.3) {
-                colliders.push({
-                    x: r.x,
-                    z: r.z,
-                    radius,
-                    id: `rock-${i}`,
-                    damageOnHit: true,
-                });
+            const sx = r.scaleX;
+            const sz = r.scaleZ;
+            const longAxis  = Math.max(sx, sz);
+            const shortAxis = Math.min(sx, sz);
+            const id = `rock-${i}`;
+
+            // round-ish rocks: single circle from the average extent (catches
+            // a bit more of the visible footprint than max-based did, without
+            // becoming magnetic).
+            if (longAxis / shortAxis < 1.2) {
+                const radius = (sx + sz) * 0.5 * 0.75;
+                if (radius > 0.3) {
+                    colliders.push({ x: r.x, z: r.z, radius, id, damageOnHit: true });
+                }
+                continue;
             }
+
+            // elongated rocks: two circles spaced along the long axis so the
+            // collider follows the visible outline. shared id keeps a sweep
+            // through one rock counted as a single damage event.
+            const radius = shortAxis * 0.8;
+            if (radius <= 0.3) continue;
+            const offset = (longAxis - shortAxis) * 0.85;
+
+            // local long axis (+X if sx >= sz, else +Z) rotated into world XZ
+            const cosR = Math.cos(r.rotY);
+            const sinR = Math.sin(r.rotY);
+            const lx = (sx >= sz) ?  cosR : sinR;
+            const lz = (sx >= sz) ? -sinR : cosR;
+            const dx = lx * offset;
+            const dz = lz * offset;
+
+            colliders.push({ x: r.x - dx, z: r.z - dz, radius, id, damageOnHit: true });
+            colliders.push({ x: r.x + dx, z: r.z + dz, radius, id, damageOnHit: true });
         }
         return colliders;
     }
