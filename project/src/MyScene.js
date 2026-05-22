@@ -66,7 +66,7 @@ export class MyScene extends CGFscene {
         this.terrain = new MyTerrain(this, 160, 3000, 16, 42);
         // sits just in front of the barn door (barn front face at world Z = barnPos.z + 5)
         this.deliveryZone = new MyDeliveryZone(this, this.barnPos.x, this.barnPos.z + 12, 5.5, this.terrain);
-        this.rockSet = new MyRockSet(this, this.terrain, 95, 520, 123);
+        this.rockSet = new MyRockSet(this, this.terrain, 200, 540, 123);
         this.flowerSet = new MyFlowerSet(this, this.terrain, 150, 500, 777);
         // many small patches so they hug the rolling hills
         this.grassSet = new MyGrassSet(this, this.terrain, 3500, 480, 580, 456);

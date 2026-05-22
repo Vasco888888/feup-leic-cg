@@ -49,7 +49,7 @@ export class MyGameplay {
     }
 
     init() {
-        this.bales = this._generateBales(22, 2024);
+        this.bales = this._generateBales(90, 2024);
 
         // park the wagon next to the barn so the title screen frames the wagon
         // with the barn behind it
@@ -113,7 +113,7 @@ export class MyGameplay {
         this._damagePeak = 0;
         this._healingPeak = 0;
 
-        this.bales = this._generateBales(22, 2024);
+        this.bales = this._generateBales(90, 2024);
 
         // spawn in front of the barn facing the delivery zone — matches the
         // title-screen framing so Play continues directly from the menu pose
@@ -244,8 +244,8 @@ export class MyGameplay {
     _generateBales(count, seed) {
         const bales = [];
         const TWO_PI = Math.PI * 2;
-        const maxDist = 460;
-        const minDist = 18;
+        const maxDist = 490;
+        const minDist = 12;
 
         const hash = (n) => {
             let h = ((n + seed * 919) * 374761393) | 0;
