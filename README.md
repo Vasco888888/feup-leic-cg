@@ -1,16 +1,32 @@
-# CG 2025/2026
+<p align="center">
+  <img src="project/images/logo.png" alt="Return to the Barn" width="520"/>
+</p>
 
-## Group T04G06
-| Name               | Number     | E-Mail             |
-| -----------------  | ---------- | ------------------ |
-| Mário Pereira      | 202304965  | up202304965@up.pt  |
-| Vasco Sá           | 202306731  | up202306731@up.pt  |
+<p align="center">
+  <strong>Computer Graphics (CG) — FEUP · L.EIC 2025/2026</strong><br/>
+  Class T04 · Group G06
+</p>
 
-----
+<p align="center">
+  Drive a prairie schooner across procedurally generated rolling hills,
+  gather hay bales, and deliver them to the barn before your HP runs out.
+</p>
 
-  - [tp1](tp1/README.md)
-  - [tp2](tp2/README.md)
-  - [tp3](tp3/README.md)
-  - [tp4](tp4/README.md)
-  - [tp5](tp5/README.md)
-  - [Project](project/README.md)
+---
+
+A real-time WebGL scene built on the WebCGF framework — procedural terrain, custom
+GLSL shaders, a day/night cycle, and bicycle-model wagon kinematics.
+
+## Quick start
+
+```bash
+cd project
+npx live-server .
+```
+
+Then click **Play**. Tested on recent Chrome and Firefox.
+
+## Repository layout
+
+- [`project/`](project/) — **Return to the Barn**, the course project (all original group work). See its [README](project/README.md) for the full feature list, controls, and screenshots.
+- [`lib/`](lib/) — the WebCGF framework, a course-provided dependency the project builds on.

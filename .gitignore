@@ -6,3 +6,6 @@
 ehthumbs.db
 Thumbs.db
 .vscode
+
+# Node (live-server / tooling)
+node_modules/
